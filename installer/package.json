@@ -1,0 +1,47 @@
+{
+  "name": "token-tracker-installer",
+  "version": "1.7.0",
+  "description": "Token Tracker Setup",
+  "author": "Token Tracker Project",
+  "main": "main.js",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "44.2.0"
+  },
+  "build": {
+    "appId": "com.tokentracker.installer",
+    "productName": "Token Tracker Setup",
+    "electronVersion": "44.2.0",
+    "directories": {
+      "output": "../release"
+    },
+    "files": [
+      "main.js",
+      "preload.cjs",
+      "shortcuts.js",
+      "index.html",
+      "style.css",
+      "renderer.js",
+      "assets/**/*",
+      "payload.tar.gz"
+    ],
+    "asarUnpack": [
+      "payload.tar.gz"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "artifactName": "Token-Tracker-Setup-1.7.exe"
+    },
+    "portable": {
+      "artifactName": "Token-Tracker-Setup-1.7.exe"
+    }
+  }
+}

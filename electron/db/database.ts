@@ -88,6 +88,11 @@ export function initDatabase(customPath?: string): DatabaseSync {
       dismissed INTEGER NOT NULL DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sessions_project_id ON sessions(project_id);
     CREATE INDEX IF NOT EXISTS idx_turns_session_id ON turns(session_id);
     CREATE INDEX IF NOT EXISTS idx_turns_timestamp ON turns(timestamp);
@@ -125,4 +130,27 @@ export function getDb(): DatabaseSync {
     return initDatabase()
   }
   return dbInstance
+}
+
+export function getAppSetting(key: string, defaultValue: string = ''): string {
+  const db = getDb()
+  try {
+    const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(key) as { value: string } | undefined
+    return row ? row.value : defaultValue
+  } catch {
+    return defaultValue
+  }
+}
+
+export function setAppSetting(key: string, value: string): void {
+  const db = getDb()
+  try {
+    db.prepare(`
+      INSERT INTO app_settings (key, value)
+      VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(key, value)
+  } catch (err) {
+    console.warn(`[Database] Failed to set setting "${key}":`, err)
+  }
 }

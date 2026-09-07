@@ -1,0 +1,51 @@
+{
+  "name": "@andymlandai/token-tracker-cli",
+  "version": "1.0.0",
+  "description": "Ink (React-based) CLI companion for Token Tracker - Exact local token and cost tracking",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "bin": {
+    "token-tracker": "./bin/token-tracker.js",
+    "tt": "./bin/tt.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md"
+  ],
+  "main": "dist/cli.js",
+  "scripts": {
+    "build": "tsc",
+    "prepack": "tsc",
+    "prepublishOnly": "tsc",
+    "start": "node ./bin/token-tracker.js"
+  },
+  "keywords": [
+    "token-tracker",
+    "cli",
+    "ink",
+    "react-cli",
+    "ai-tokens",
+    "llm-costs",
+    "claude-code",
+    "antigravity",
+    "cline"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ink": "^7.1.1",
+    "ink-table": "^3.1.0",
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "@types/react": "^19.2.18",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

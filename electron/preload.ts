@@ -27,6 +27,9 @@ export interface ElectronAPI {
   closeWindow: () => Promise<void>
   isWindowMaximized: () => Promise<boolean>
   onWindowMaximizedChange: (callback: (isMaximized: boolean) => void) => () => void
+  getAppSettings: () => Promise<{ minimizeToTray: boolean; launchOnStartup: boolean }>
+  setAppSetting: (key: string, value: string) => Promise<{ success: boolean }>
+  setLaunchOnStartup: (enabled: boolean) => Promise<{ success: boolean; enabled?: boolean; error?: string }>
 }
 
 const api: ElectronAPI = {
@@ -74,6 +77,9 @@ const api: ElectronAPI = {
       ipcRenderer.removeListener('window-maximized-state', handler)
     }
   },
+  getAppSettings: () => ipcRenderer.invoke('getAppSettings'),
+  setAppSetting: (key: string, value: string) => ipcRenderer.invoke('setAppSetting', { key, value }),
+  setLaunchOnStartup: (enabled: boolean) => ipcRenderer.invoke('setLaunchOnStartup', enabled),
 }
 
 ipcRenderer.on('navigate-page', (_event, detail) => {

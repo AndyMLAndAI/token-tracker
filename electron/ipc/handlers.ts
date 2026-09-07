@@ -1,9 +1,9 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { app, ipcMain, BrowserWindow } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
 import crypto from 'node:crypto'
-import { getDb } from '../db/database'
+import { getDb, getAppSetting, setAppSetting } from '../db/database'
 import { resolveAllSources } from '../ingestion/path-resolver'
 import { ingestClaudeStatsCache } from '../ingestion/claude-code'
 import { IngestionEngine } from '../ingestion/watcher'
@@ -650,5 +650,40 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
       return mainWindow.isMaximized()
     }
     return false
+  })
+
+  // 12. Application Preferences & Startup Settings
+  ipcMain.handle('getAppSettings', () => {
+    const minimizeToTray = getAppSetting('minimize_to_tray', 'true') === 'true'
+    let launchOnStartup = false
+    try {
+      const loginSettings = app.getLoginItemSettings()
+      launchOnStartup = Boolean(loginSettings.openAtLogin)
+    } catch (e) {
+      console.warn('[Handlers] getLoginItemSettings error:', e)
+    }
+    return {
+      minimizeToTray,
+      launchOnStartup,
+    }
+  })
+
+  ipcMain.handle('setAppSetting', (_event, { key, value }: { key: string; value: string }) => {
+    setAppSetting(key, value)
+    return { success: true }
+  })
+
+  ipcMain.handle('setLaunchOnStartup', (_event, enabled: boolean) => {
+    try {
+      app.setLoginItemSettings({
+        openAtLogin: enabled,
+        path: process.execPath,
+      })
+      const verify = app.getLoginItemSettings().openAtLogin
+      return { success: true, enabled: verify }
+    } catch (err: any) {
+      console.warn('[Handlers] Failed to set login item settings:', err)
+      return { success: false, error: err.message }
+    }
   })
 }

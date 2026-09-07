@@ -2,10 +2,11 @@ import { app, BrowserWindow } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { initDatabase, getDb } from './db/database'
+import { initDatabase, getDb, getAppSetting, setAppSetting } from './db/database'
 import { IngestionEngine } from './ingestion/watcher'
 import { registerIpcHandlers } from './ipc/handlers'
 import { checkBudgetsAndNotify } from './ipc/budget-checker'
+import { TrayManager } from './tray/tray-manager'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -28,6 +29,8 @@ app.setAppUserModelId('com.tokentracker.app')
 
 let mainWindow: BrowserWindow | null = null
 let ingestionEngine: IngestionEngine | null = null
+let trayManager: TrayManager | null = null
+let isQuitting = false
 
 function getAppIconPath(): string {
   const appRoot = process.env.APP_ROOT || path.join(__dirname, '..')
@@ -175,6 +178,128 @@ function createWindow() {
     })
   }
 
+  // Handle automated system tray verification if requested
+  if (process.argv.includes('--test-tray')) {
+    mainWindow.webContents.on('did-finish-load', async () => {
+      console.log('[TestTray] Starting automated verification...')
+      const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+      try {
+        await sleep(1000)
+
+        // 1. Check initial app settings
+        const minToTraySetting = getAppSetting('minimize_to_tray', 'true')
+        console.log(`[TestTray] 1. Initial minimize_to_tray setting: "${minToTraySetting}"`)
+        if (minToTraySetting !== 'true') throw new Error('minimize_to_tray should default to "true"')
+
+        // 2. Verify window is visible initially
+        console.log(`[TestTray] 2. Window is visible initially: ${mainWindow!.isVisible()}`)
+        if (!mainWindow!.isVisible()) throw new Error('mainWindow should be visible on start')
+
+        // 3. Trigger close (which should hide to tray)
+        console.log('[TestTray] 3. Triggering window close...')
+        mainWindow!.close()
+        await sleep(500)
+
+        console.log(`[TestTray] 3b. Window is visible after close: ${mainWindow!.isVisible()}`)
+        if (mainWindow!.isVisible()) throw new Error('mainWindow should be hidden after close with minimize_to_tray=true')
+
+        // 4. Verify first-time tray notification was recorded
+        const hasNotif = getAppSetting('has_shown_tray_first_notification', 'false')
+        console.log(`[TestTray] 4. has_shown_tray_first_notification: "${hasNotif}"`)
+        if (hasNotif !== 'true') throw new Error('has_shown_tray_first_notification should be "true"')
+
+        // 5. Test background ingestion while minimized
+        console.log('[TestTray] 5. Testing background ingestion while window is minimized...')
+        const db = getDb()
+        const testTurnId = 'test-tray-turn-' + Date.now()
+        const testSessionId = 'test-tray-session-' + Date.now()
+        const testProjId = 'test-tray-proj-' + Date.now()
+        db.prepare('INSERT OR IGNORE INTO projects (id, path, name, tool_source, created_at) VALUES (?, ?, ?, ?, ?)').run(
+          testProjId,
+          'C:/test/tray-proj',
+          'TrayTestProject',
+          'claude_code',
+          Date.now()
+        )
+        db.prepare('INSERT INTO sessions (id, project_id, tool_source, model, start_time, provenance) VALUES (?, ?, ?, ?, ?, ?)').run(
+          testSessionId,
+          testProjId,
+          'claude_code',
+          'claude-3-7-sonnet',
+          Date.now(),
+          'exact'
+        )
+        db.prepare('INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+          testTurnId,
+          testSessionId,
+          1000,
+          500,
+          0,
+          0,
+          0.05,
+          Date.now(),
+          'exact'
+        )
+
+        // Update tray
+        trayManager!.updateTray()
+        console.log('[TestTray] 5b. Successfully recorded turn and updated tray metrics while minimized')
+
+        // 6. Test restoreWindow from tray
+        console.log('[TestTray] 6. Restoring window from tray...')
+        trayManager!.restoreWindow()
+        await sleep(500)
+        console.log(`[TestTray] 6b. Window is visible after restore: ${mainWindow!.isVisible()}`)
+        if (!mainWindow!.isVisible()) throw new Error('mainWindow should be visible after restore')
+
+        // 7. Test toggling minimize_to_tray off
+        console.log('[TestTray] 7. Toggling minimize_to_tray off...')
+        setAppSetting('minimize_to_tray', 'false')
+        const updatedSetting = getAppSetting('minimize_to_tray', 'true')
+        console.log(`[TestTray] 7b. minimize_to_tray is now: "${updatedSetting}"`)
+        if (updatedSetting !== 'false') throw new Error('minimize_to_tray should be "false"')
+
+        // Restore setting to default true
+        setAppSetting('minimize_to_tray', 'true')
+
+        // 8. Capture updated Settings screen with tray toggle
+        const screenshotsDir = path.join(process.env.APP_ROOT || path.join(__dirname, '..'), 'screenshots')
+        mainWindow!.webContents.send('navigate-page', { page: 'settings' })
+        await sleep(1500)
+        const img = await mainWindow!.webContents.capturePage()
+        const settingsPath = path.join(screenshotsDir, '04_settings.png')
+        fs.writeFileSync(settingsPath, img.toPNG())
+        console.log(`[TestTray] Saved updated settings screenshot: ${settingsPath}`)
+
+        const artifactDir = 'C:\\Users\\Ganesh Bhopne\\.gemini\\antigravity\\brain\\7e69aa6c-0daa-4437-b704-caf504338880'
+        if (fs.existsSync(artifactDir)) {
+          fs.copyFileSync(settingsPath, path.join(artifactDir, '04_settings.png'))
+        }
+
+        console.log('[TestTray] >>> ALL SYSTEM TRAY TESTS PASSED CLEANLY! <<<')
+      } catch (testErr) {
+        console.error('[TestTray] FAILED:', testErr)
+        process.exitCode = 1
+      } finally {
+        isQuitting = true
+        app.quit()
+      }
+    })
+  }
+
+  mainWindow.on('close', (event) => {
+    if (isQuitting) {
+      return
+    }
+    const minimizeToTray = getAppSetting('minimize_to_tray', 'true') === 'true'
+    if (minimizeToTray) {
+      event.preventDefault()
+      mainWindow?.hide()
+      trayManager?.showFirstTimeNotification()
+    }
+  })
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -188,6 +313,19 @@ app.whenReady().then(async () => {
     createWindow()
 
     if (mainWindow) {
+      trayManager = new TrayManager(mainWindow, () => {
+        isQuitting = true
+        if (trayManager) {
+          trayManager.destroy()
+          trayManager = null
+        }
+        if (ingestionEngine) {
+          ingestionEngine.stop()
+          ingestionEngine = null
+        }
+        app.quit()
+      })
+
       if (ingestionEngine) {
         ingestionEngine.stop()
         ingestionEngine = null
@@ -196,6 +334,7 @@ app.whenReady().then(async () => {
       ingestionEngine = new IngestionEngine({
         onDataChanged: () => {
           checkBudgetsAndNotify(mainWindow)
+          trayManager?.updateTray()
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('data-updated')
           }
@@ -210,6 +349,9 @@ app.whenReady().then(async () => {
       // Initial budget evaluation
       checkBudgetsAndNotify(mainWindow)
 
+      // Initial tray data update
+      trayManager?.updateTray()
+
       // Start watching target directories for live updates
       ingestionEngine.startWatching()
     }
@@ -220,6 +362,7 @@ app.whenReady().then(async () => {
   app.on('second-instance', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.show()
       mainWindow.focus()
     }
   })
@@ -227,11 +370,19 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
+    } else if (mainWindow) {
+      mainWindow.show()
+      mainWindow.focus()
     }
   })
 })
 
 app.on('before-quit', () => {
+  isQuitting = true
+  if (trayManager) {
+    trayManager.destroy()
+    trayManager = null
+  }
   if (ingestionEngine) {
     ingestionEngine.stop()
     ingestionEngine = null
@@ -239,11 +390,18 @@ app.on('before-quit', () => {
 })
 
 app.on('window-all-closed', () => {
-  if (ingestionEngine) {
-    ingestionEngine.stop()
-    ingestionEngine = null
-  }
-  if (process.platform !== 'darwin') {
-    app.quit()
+  const minimizeToTray = getAppSetting('minimize_to_tray', 'true') === 'true'
+  if (!minimizeToTray || isQuitting) {
+    if (trayManager) {
+      trayManager.destroy()
+      trayManager = null
+    }
+    if (ingestionEngine) {
+      ingestionEngine.stop()
+      ingestionEngine = null
+    }
+    if (process.platform !== 'darwin') {
+      app.quit()
+    }
   }
 })

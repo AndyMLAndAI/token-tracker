@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ProvenanceBadge } from '@/components/ui/provenance-badge'
 import { formatNumber, formatCurrency } from '@/lib/utils'
-import { RefreshCw, Terminal, Layers, HardDrive, Radio, Sparkles, Code2, Bot, Compass, Check, Copy, Trash2, AlertTriangle, Bell, ShieldAlert, DollarSign } from 'lucide-react'
+import { RefreshCw, Terminal, Layers, HardDrive, Radio, Sparkles, Code2, Bot, Compass, Check, Copy, Trash2, AlertTriangle, Bell, ShieldAlert, DollarSign, Sliders } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { AppLogo } from '@/components/ui/AppLogo'
 
@@ -23,6 +23,10 @@ export function Settings() {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [clearStatusMessage, setClearStatusMessage] = useState<string | null>(null)
 
+  // App preferences (Tray & Startup)
+  const [minimizeToTray, setMinimizeToTray] = useState(true)
+  const [launchOnStartup, setLaunchOnStartup] = useState(false)
+
   // Budget configuration state
   const [budgets, setBudgets] = useState<any[]>([])
   const [projectsList, setProjectsList] = useState<any[]>([])
@@ -37,18 +41,40 @@ export function Settings() {
   const loadData = async () => {
     if (window.electronAPI) {
       try {
-        const [sourcesRes, proxyRes, budgetsRes, projectsRes] = await Promise.all([
+        const [sourcesRes, proxyRes, budgetsRes, projectsRes, appSettingsRes] = await Promise.all([
           window.electronAPI.getSourceStatuses(),
           window.electronAPI.getProxyStatus(),
           window.electronAPI.getBudgets(),
           window.electronAPI.getProjects(),
+          window.electronAPI.getAppSettings ? window.electronAPI.getAppSettings() : Promise.resolve(null),
         ])
         setSources(sourcesRes || [])
         if (proxyRes) setProxyStatus(proxyRes)
         setBudgets(budgetsRes || [])
         setProjectsList(projectsRes || [])
+        if (appSettingsRes) {
+          setMinimizeToTray(Boolean(appSettingsRes.minimizeToTray))
+          setLaunchOnStartup(Boolean(appSettingsRes.launchOnStartup))
+        }
       } catch (err) {
         console.error('Failed to load settings data:', err)
+      }
+    }
+  }
+
+  const handleToggleMinimizeToTray = async (checked: boolean) => {
+    setMinimizeToTray(checked)
+    if (window.electronAPI?.setAppSetting) {
+      await window.electronAPI.setAppSetting('minimize_to_tray', String(checked))
+    }
+  }
+
+  const handleToggleLaunchOnStartup = async (checked: boolean) => {
+    setLaunchOnStartup(checked)
+    if (window.electronAPI?.setLaunchOnStartup) {
+      const res = await window.electronAPI.setLaunchOnStartup(checked)
+      if (res && res.enabled !== undefined) {
+        setLaunchOnStartup(res.enabled)
       }
     }
   }
@@ -189,6 +215,56 @@ export function Settings() {
           ✓ Sync complete: Ingested {lastSyncResult.claudeTurns || 0} Claude turns, {lastSyncResult.antigravityTurns || 0} Antigravity turns, {lastSyncResult.syntheticTurns || 0} estimated turns.
         </div>
       )}
+
+      {/* Application Preferences Card (Tray & Startup) */}
+      <Card className="bg-[#050505] border-[#222222]">
+        <CardHeader className="p-4 px-5 pb-3 border-b border-[#1a1a1a] flex flex-row items-center justify-between gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-md border border-[#333333] bg-[#0c0c0c] flex items-center justify-center text-white">
+              <Sliders className="w-4 h-4 text-[#e2e8f0]" />
+            </div>
+            <div>
+              <CardTitle className="text-sm font-semibold text-white">
+                Application Preferences
+              </CardTitle>
+              <p className="text-xs text-[#888888]">
+                Configure desktop behavior, system tray integration, and startup options
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-5 space-y-5 text-xs font-mono">
+          <div className="flex items-center justify-between pb-4 border-b border-[#1a1a1a]">
+            <div className="space-y-1 pr-4">
+              <div className="text-white font-medium text-xs font-sans">
+                Minimize to tray instead of closing
+              </div>
+              <div className="text-[#888888] text-[11px] font-sans">
+                Clicking the window close button hides Token Tracker to the system tray so background ingestion continues running.
+              </div>
+            </div>
+            <Switch
+              checked={minimizeToTray}
+              onCheckedChange={handleToggleMinimizeToTray}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-1 pr-4">
+              <div className="text-white font-medium text-xs font-sans">
+                Launch on system startup
+              </div>
+              <div className="text-[#888888] text-[11px] font-sans">
+                Automatically start Token Tracker in the background when logging into Windows.
+              </div>
+            </div>
+            <Switch
+              checked={launchOnStartup}
+              onCheckedChange={handleToggleLaunchOnStartup}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Embedded Local Loopback Proxy Card */}
       <Card className="bg-[#050505] border-[#222222]">

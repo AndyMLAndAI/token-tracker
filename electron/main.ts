@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, nativeImage } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -25,23 +25,58 @@ if (!gotTheLock) {
   app.quit()
 }
 
-app.setAppUserModelId('com.tokentracker.app')
+// Configure Windows AppUserModelId properly:
+// When running in development (npm run dev) or portable runs without an installed Start Menu shortcut,
+// setting process.execPath instructs Windows Taskbar to directly bind the window and its taskbar button
+// to the running process icon. When installed with an NSIS shortcut, it uses the registered appId.
+if (process.platform === 'win32') {
+  const startMenuShortcut = path.join(
+    process.env.APPDATA || '',
+    'Microsoft',
+    'Windows',
+    'Start Menu',
+    'Programs',
+    'Token Tracker.lnk'
+  )
+  if (app.isPackaged && fs.existsSync(startMenuShortcut)) {
+    app.setAppUserModelId('com.tokentracker.app')
+  } else {
+    app.setAppUserModelId(process.execPath)
+  }
+}
 
 let mainWindow: BrowserWindow | null = null
 let ingestionEngine: IngestionEngine | null = null
 let trayManager: TrayManager | null = null
 let isQuitting = false
 
-function getAppIconPath(): string {
+function getAppIcon(): { path: string; image: Electron.NativeImage } {
   const appRoot = process.env.APP_ROOT || path.join(__dirname, '..')
-  if (process.platform === 'win32') {
-    return path.join(appRoot, 'build', 'icon.ico')
+  const candidates = [
+    path.join(appRoot, 'build', 'icon.ico'),
+    path.join(appRoot, 'public', 'icon.ico'),
+    path.join(appRoot, 'dist', 'icon.ico'),
+    path.join(appRoot, 'build', 'icon.png'),
+    path.join(appRoot, 'public', 'icon.png'),
+    path.join(appRoot, 'dist', 'icon.png'),
+    path.join(appRoot, 'public', 'favicon.ico'),
+  ]
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      const img = nativeImage.createFromPath(p)
+      if (!img.isEmpty()) {
+        return { path: p, image: img }
+      }
+    }
   }
-  return path.join(appRoot, 'build', 'icon.png')
+
+  const fallback = path.join(appRoot, 'build', 'icon.ico')
+  return { path: fallback, image: nativeImage.createFromPath(fallback) }
 }
 
 function createWindow() {
-  const iconPath = getAppIconPath()
+  const { path: iconPath, image: appIcon } = getAppIcon()
 
   mainWindow = new BrowserWindow({
     width: 1320,
@@ -50,7 +85,7 @@ function createWindow() {
     minHeight: 700,
     frame: false,
     thickFrame: true, // Re-enables native window style for crisp DWM taskbar thumbnails & aero snap
-    icon: iconPath,
+    icon: appIcon,
     backgroundColor: '#000000',
     title: 'Token Tracker',
     show: true,
@@ -60,6 +95,23 @@ function createWindow() {
       contextIsolation: true,
       sandbox: false,
     },
+  })
+
+  // Explicitly apply icon to HWND for Windows taskbar button binding
+  if (process.platform === 'win32' && !appIcon.isEmpty()) {
+    mainWindow.setIcon(appIcon)
+  }
+
+  mainWindow.on('ready-to-show', () => {
+    if (mainWindow && !mainWindow.isDestroyed() && process.platform === 'win32' && !appIcon.isEmpty()) {
+      mainWindow.setIcon(appIcon)
+    }
+  })
+
+  mainWindow.on('show', () => {
+    if (mainWindow && !mainWindow.isDestroyed() && process.platform === 'win32' && !appIcon.isEmpty()) {
+      mainWindow.setIcon(appIcon)
+    }
   })
 
   // Explicitly reset thumbnail clipping for Windows DWM taskbar hover preview

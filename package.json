@@ -52,7 +52,9 @@
     },
     "files": [
       "dist/**",
-      "dist-electron/**"
+      "dist-electron/**",
+      "build/**",
+      "public/**"
     ],
     "icon": "build/icon.ico",
     "win": {

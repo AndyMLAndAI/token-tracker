@@ -72,7 +72,3 @@ This is an early release (v1.7.0) and my first project at this scale — it work
 ## Tech Stack
 
 TypeScript · Electron · React · shadcn/ui · SQLite (`node:sqlite`)
-
-## License
-
-*(add your chosen license here — MIT is common for projects like this if you want it fully open)*

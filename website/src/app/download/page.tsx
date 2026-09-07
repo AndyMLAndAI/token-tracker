@@ -110,7 +110,7 @@ export default function DownloadPage() {
                     >
                       <Button asChild size="lg" className="bg-white text-black font-semibold hover:bg-white/90 h-10 px-5 w-full sm:w-auto shadow-md shadow-white/5">
                         <a
-                          href={process.env.NEXT_PUBLIC_DOWNLOAD_URL || "https://github.com/AndyMLAndAI/token-tracker/releases/download/v1.7.0/Token-Tracker-Setup-1.7.exe"}
+                          href={process.env.NEXT_PUBLIC_DOWNLOAD_URL || "https://github.com/AndyMLAndAI/token-tracker/releases/download/v1.8.0/Token-Tracker-Setup-1.8.exe"}
                           className="flex items-center gap-2"
                         >
                           <Download className="w-4 h-4" />

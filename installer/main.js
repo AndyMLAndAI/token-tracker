@@ -204,7 +204,7 @@ exit /b 0
 
 [HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\TokenTracker]
 "DisplayName"="Token Tracker"
-"DisplayVersion"="1.7.0"
+"DisplayVersion"="1.8.0"
 "Publisher"="Token Tracker Project"
 "DisplayIcon"="${escExe},0"
 "InstallLocation"="${escTarget}"

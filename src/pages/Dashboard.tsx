@@ -6,7 +6,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ProvenanceBadge } from '@/components/ui/provenance-badge'
 import { formatNumber, formatCurrency } from '@/lib/utils'
 import { exportToCsv, exportToJson, generatePrintableHtmlReport, ReportData } from '@/lib/export'
-import { FileText, Download, Bell, ShieldAlert, AlertTriangle, X, Check } from 'lucide-react'
+import { FileText, Download, Bell, ShieldAlert, AlertTriangle, X, Check, Calendar, Layers, SlidersHorizontal, Eye } from 'lucide-react'
+import { useUnlock } from '@/context/UnlockContext'
+import { LockedBadge } from '@/components/ui/LockedBadge'
 import {
   ChartConfig,
   ChartContainer,
@@ -103,13 +105,25 @@ const donutChartConfig: ChartConfig = {
 }
 
 export function Dashboard({ onSelectProject }: DashboardProps) {
+  const { isUnlocked, checkAndRecordExport, openUnlockModal } = useUnlock()
   const [metrics, setMetrics] = useState<any>(null)
   const [budgetStatus, setBudgetStatus] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // QoL 8: Multiple Saved Dashboard Views
+  const [savedView, setSavedView] = useState<'default' | 'cost' | 'tokens' | 'active'>('default')
+
   // Report generator modal state
   const [showReportModal, setShowReportModal] = useState(false)
-  const [reportPeriod, setReportPeriod] = useState<'today' | '7d' | '30d' | 'all'>('30d')
+  const [reportPeriod, setReportPeriod] = useState<'today' | '7d' | '30d' | 'all' | 'custom'>('30d')
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 14)
+    return d.toISOString().slice(0, 10)
+  })
+  const [customEndDate, setCustomEndDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [reportBrandingCompany, setReportBrandingCompany] = useState(() => localStorage.getItem('token_tracker_company') || '')
+  const [reportBrandingAuthor, setReportBrandingAuthor] = useState(() => localStorage.getItem('token_tracker_author') || '')
   const [reportData, setReportData] = useState<ReportData | null>(null)
   const [isLoadingReport, setIsLoadingReport] = useState(false)
 
@@ -130,20 +144,24 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
     }
   }
 
-  const loadReportData = async (period: 'today' | '7d' | '30d' | 'all') => {
+  const loadReportData = async (period: 'today' | '7d' | '30d' | 'all' | 'custom') => {
     if (!window.electronAPI) return
     setIsLoadingReport(true)
     const now = Date.now()
     let start = 0
+    let end = now
     if (period === 'today') {
       start = now - 24 * 60 * 60 * 1000
     } else if (period === '7d') {
       start = now - 7 * 24 * 60 * 60 * 1000
     } else if (period === '30d') {
       start = now - 30 * 24 * 60 * 60 * 1000
+    } else if (period === 'custom') {
+      start = new Date(customStartDate).getTime() || 0
+      end = new Date(customEndDate).getTime() + 24 * 60 * 60 * 1000 - 1
     }
     try {
-      const data = await window.electronAPI.getReportData({ startDate: start, endDate: now })
+      const data = await window.electronAPI.getReportData({ startDate: start, endDate: end })
       setReportData(data)
     } catch (err) {
       console.error('Failed to load report data:', err)
@@ -157,9 +175,21 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
     loadReportData(reportPeriod)
   }
 
-  const handlePeriodChange = (p: 'today' | '7d' | '30d' | 'all') => {
+  const handlePeriodChange = (p: 'today' | '7d' | '30d' | 'all' | 'custom') => {
+    if (p === 'custom' && !isUnlocked) {
+      openUnlockModal('Custom Date Range Picker')
+      return
+    }
     setReportPeriod(p)
     loadReportData(p)
+  }
+
+  const handleSavedViewChange = (v: 'default' | 'cost' | 'tokens' | 'active') => {
+    if (v !== 'default' && !isUnlocked) {
+      openUnlockModal('Multiple Saved Dashboard Views')
+      return
+    }
+    setSavedView(v)
   }
 
   useEffect(() => {
@@ -278,7 +308,25 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
             Exact local token and cost metrics ingested from local session logs.
           </p>
         </div>
-        <div className="flex items-center space-x-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* QoL 8: Saved Views Dropdown */}
+          <div className="flex items-center space-x-1.5 border border-[#222222] bg-[#0a0a0a] px-2 py-1 rounded-md text-xs font-mono">
+            <Layers className="w-3.5 h-3.5 text-[#888888]" />
+            <select
+              value={savedView}
+              onChange={(e) => handleSavedViewChange(e.target.value as any)}
+              className="bg-transparent text-[#cccccc] text-xs font-mono focus:outline-none cursor-pointer"
+            >
+              <option value="default" className="bg-[#111111] text-white">View: Balanced</option>
+              <option value="cost" className="bg-[#111111] text-white">View: Cost Heavy</option>
+              <option value="tokens" className="bg-[#111111] text-white">View: Token Volume</option>
+              <option value="active" className="bg-[#111111] text-white">View: Active Workspaces</option>
+            </select>
+            {!isUnlocked && (
+              <LockedBadge featureName="Multiple Saved Views" label="Saved Views" />
+            )}
+          </div>
+
           <Button
             size="sm"
             variant="outline"
@@ -870,21 +918,92 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
 
               {/* Period Selector Tabs */}
               <div>
-                <label className="text-[10px] uppercase text-[#71717a] block mb-1.5">Date Range</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {(['today', '7d', '30d', 'all'] as const).map((p) => (
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[10px] uppercase text-[#71717a] block">Date Range</label>
+                  {!isUnlocked && (
+                    <LockedBadge featureName="Custom Date Range Picker" label="Custom Dates" />
+                  )}
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {(['today', '7d', '30d', 'all', 'custom'] as const).map((p) => (
                     <button
                       key={p}
                       onClick={() => handlePeriodChange(p)}
-                      className={`py-1.5 px-3 rounded border text-xs font-medium transition-colors ${
+                      className={`py-1.5 px-2 rounded border text-xs font-medium transition-colors ${
                         reportPeriod === p
                           ? 'border-white bg-white text-black'
                           : 'border-[#27272a] bg-[#141417] text-[#a1a1aa] hover:text-white'
                       }`}
                     >
-                      {p === 'today' ? 'Today' : p === '7d' ? 'Last 7D' : p === '30d' ? 'Last 30D' : 'All Time'}
+                      {p === 'today' ? 'Today' : p === '7d' ? '7D' : p === '30d' ? '30D' : p === 'all' ? 'All' : 'Custom'}
                     </button>
                   ))}
+                </div>
+
+                {/* QoL 2: Custom Date Range Inputs */}
+                {reportPeriod === 'custom' && (
+                  <div className="mt-2.5 p-2.5 rounded bg-[#111113] border border-[#27272a] flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <div className="flex items-center gap-1 text-xs">
+                      <span className="text-[#888888]">From:</span>
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        className="bg-black border border-[#333333] rounded px-1.5 py-0.5 text-xs text-white"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1 text-xs">
+                      <span className="text-[#888888]">To:</span>
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        className="bg-black border border-[#333333] rounded px-1.5 py-0.5 text-xs text-white"
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => loadReportData('custom')}
+                      className="h-6 text-[11px] px-2 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold ml-auto"
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* QoL 6: Custom Report Branding */}
+              <div className="p-3 rounded-lg border border-[#1f1f23] bg-[#09090b] space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#71717a] uppercase tracking-wider">Report Branding (HTML/PDF)</span>
+                  {!isUnlocked && (
+                    <LockedBadge featureName="Custom Report Branding" label="Custom Branding" />
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder={isUnlocked ? "Company / Org Name" : "Company Name (Locked)"}
+                    value={reportBrandingCompany}
+                    disabled={!isUnlocked}
+                    onChange={(e) => {
+                      setReportBrandingCompany(e.target.value)
+                      localStorage.setItem('token_tracker_company', e.target.value)
+                    }}
+                    className="bg-black border border-[#222222] rounded px-2 py-1 text-xs text-white placeholder:text-[#555555] disabled:opacity-50"
+                  />
+                  <input
+                    type="text"
+                    placeholder={isUnlocked ? "Prepared By / Author" : "Author Name (Locked)"}
+                    value={reportBrandingAuthor}
+                    disabled={!isUnlocked}
+                    onChange={(e) => {
+                      setReportBrandingAuthor(e.target.value)
+                      localStorage.setItem('token_tracker_author', e.target.value)
+                    }}
+                    className="bg-black border border-[#222222] rounded px-2 py-1 text-xs text-white placeholder:text-[#555555] disabled:opacity-50"
+                  />
                 </div>
               </div>
 
@@ -917,8 +1036,11 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!reportData) return
+                      const allowed = await checkAndRecordExport()
+                      if (!allowed) return
+
                       exportToCsv(
                         `token_tracker_projects_${reportPeriod}`,
                         [
@@ -941,8 +1063,11 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!reportData) return
+                      const allowed = await checkAndRecordExport()
+                      if (!allowed) return
+
                       exportToJson(`token_tracker_report_${reportPeriod}`, reportData)
                     }}
                     disabled={!reportData}
@@ -955,8 +1080,15 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
 
                 <Button
                   size="sm"
-                  onClick={() => {
-                    if (reportData) generatePrintableHtmlReport(reportData)
+                  onClick={async () => {
+                    if (!reportData) return
+                    const allowed = await checkAndRecordExport()
+                    if (!allowed) return
+
+                    generatePrintableHtmlReport(reportData, {
+                      company: reportBrandingCompany,
+                      author: reportBrandingAuthor,
+                    })
                   }}
                   disabled={!reportData}
                   className="w-full sm:w-auto h-8 text-xs px-4 bg-white text-black hover:bg-white/90 font-medium"

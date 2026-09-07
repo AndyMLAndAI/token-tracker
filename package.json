@@ -1,6 +1,6 @@
 {
   "name": "token_tracker",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Token Tracker - Exact Local AI Token & Cost Tracking Desktop App",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -59,7 +59,7 @@
     "icon": "build/icon.ico",
     "win": {
       "icon": "build/icon.ico",
-      "artifactName": "Token-Tracker-Setup-1.7.exe",
+      "artifactName": "Token-Tracker-Setup-1.8.exe",
       "target": [
         {
           "target": "nsis",

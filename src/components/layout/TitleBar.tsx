@@ -45,7 +45,7 @@ export function TitleBar() {
           Token Tracker
         </span>
         <span className="text-[10px] font-mono border border-[#262626] rounded px-1.5 py-0.2 text-[#888888] bg-[#0c0c0c]">
-          v1.7
+          v1.8
         </span>
       </div>
 

@@ -30,6 +30,16 @@ export interface ElectronAPI {
   getAppSettings: () => Promise<{ minimizeToTray: boolean; launchOnStartup: boolean }>
   setAppSetting: (key: string, value: string) => Promise<{ success: boolean }>
   setLaunchOnStartup: (enabled: boolean) => Promise<{ success: boolean; enabled?: boolean; error?: string }>
+  getUnlockStatus: () => Promise<{ unlocked: boolean; exportCount: number }>
+  unlockFeatures: () => Promise<{ success: boolean; unlocked: boolean }>
+  recordExportUse: () => Promise<{ allowed: boolean; count: number; unlocked: boolean }>
+  openContributionPage: () => Promise<{ success: boolean; unlocked: boolean }>
+  getProjectMetadata: () => Promise<Record<string, { nickname?: string; isPinned: boolean; customColor?: string }>>
+  setProjectNickname: (args: { projectId: string; nickname: string }) => Promise<{ success: boolean }>
+  togglePinProject: (projectId: string) => Promise<{ success: boolean; isPinned: boolean }>
+  setProjectColor: (args: { projectId: string; color: string }) => Promise<{ success: boolean }>
+  saveSessionNote: (args: { sessionId: string; note: string }) => Promise<{ success: boolean }>
+  onUnlockStatusChanged: (callback: (unlocked: boolean) => void) => () => void
 }
 
 const api: ElectronAPI = {
@@ -80,6 +90,22 @@ const api: ElectronAPI = {
   getAppSettings: () => ipcRenderer.invoke('getAppSettings'),
   setAppSetting: (key: string, value: string) => ipcRenderer.invoke('setAppSetting', { key, value }),
   setLaunchOnStartup: (enabled: boolean) => ipcRenderer.invoke('setLaunchOnStartup', enabled),
+  getUnlockStatus: () => ipcRenderer.invoke('getUnlockStatus'),
+  unlockFeatures: () => ipcRenderer.invoke('unlockFeatures'),
+  recordExportUse: () => ipcRenderer.invoke('recordExportUse'),
+  openContributionPage: () => ipcRenderer.invoke('openContributionPage'),
+  getProjectMetadata: () => ipcRenderer.invoke('getProjectMetadata'),
+  setProjectNickname: (args) => ipcRenderer.invoke('setProjectNickname', args),
+  togglePinProject: (projectId) => ipcRenderer.invoke('togglePinProject', projectId),
+  setProjectColor: (args) => ipcRenderer.invoke('setProjectColor', args),
+  saveSessionNote: (args) => ipcRenderer.invoke('saveSessionNote', args),
+  onUnlockStatusChanged: (callback: (unlocked: boolean) => void) => {
+    const handler = (_event: any, unlocked: boolean) => callback(unlocked)
+    ipcRenderer.on('unlock-status-changed', handler)
+    return () => {
+      ipcRenderer.removeListener('unlock-status-changed', handler)
+    }
+  },
 }
 
 ipcRenderer.on('navigate-page', (_event, detail) => {

@@ -9,7 +9,7 @@ import { ProjectDetail } from './components/ProjectDetail.js'
 
 function printHelp() {
   console.log(`
-TOKEN TRACKER v1.7.0 · Exact Local AI Token & Cost Companion (React/Ink CLI)
+TOKEN TRACKER v1.8.0 · Exact Local AI Token & Cost Companion (React/Ink CLI)
 
 USAGE:
   token-tracker [command] [options]

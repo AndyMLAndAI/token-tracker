@@ -17,7 +17,7 @@ export const Header: React.FC<HeaderProps> = ({ dbPath, live, lastUpdated }) => 
           </Box>
         ) : null}
         <Text bold color="white">TOKEN TRACKER</Text>
-        <Text color="cyan"> v1.7.0</Text>
+        <Text color="cyan"> v1.8.0</Text>
         <Text dimColor> · Exact Local AI Token &amp; Cost Companion</Text>
       </Box>
 

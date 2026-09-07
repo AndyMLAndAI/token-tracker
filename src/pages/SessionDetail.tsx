@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ProvenanceBadge } from '@/components/ui/provenance-badge'
 import { formatNumber, formatCurrency, formatDate } from '@/lib/utils'
 import { exportToCsv, exportToJson, copyMarkdownTable } from '@/lib/export'
-import { ArrowLeft, ArrowUpDown, Terminal, Download, Copy, Check } from 'lucide-react'
+import { ArrowLeft, ArrowUpDown, Terminal, Download, Copy, Check, Tag, Bookmark, Edit2 } from 'lucide-react'
 import {
   ChartConfig,
   ChartContainer,
@@ -16,6 +16,8 @@ import {
   ChartLegendContent,
 } from '@/components/ui/chart'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { useUnlock } from '@/context/UnlockContext'
+import { LockedBadge } from '@/components/ui/LockedBadge'
 
 interface SessionDetailProps {
   projectId: string
@@ -40,11 +42,14 @@ const turnLineConfig: ChartConfig = {
 }
 
 export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
+  const { isUnlocked, checkAndRecordExport, openUnlockModal } = useUnlock()
   const [sessions, setSessions] = useState<any[]>([])
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [turns, setTurns] = useState<any[]>([])
   const [sortField, setSortField] = useState<SortField>('recency')
   const [isLoading, setIsLoading] = useState(true)
+  const [sessionNote, setSessionNote] = useState('')
+  const [isSavingNote, setIsSavingNote] = useState(false)
 
   const loadSessions = async () => {
     if (window.electronAPI) {
@@ -69,7 +74,7 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
     if (window.electronAPI) {
       try {
         const res = await window.electronAPI.getSessionTurns(sessionId)
-        setTurns(res)
+        setTurns(res || [])
       } catch (err) {
         console.error('Failed to load turns:', err)
       }
@@ -89,8 +94,27 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
   useEffect(() => {
     if (selectedSessionId) {
       loadTurns(selectedSessionId)
+      const cur = sessions.find((s) => s.id === selectedSessionId)
+      setSessionNote(cur?.notes || '')
     }
-  }, [selectedSessionId])
+  }, [selectedSessionId, sessions])
+
+  const handleSaveNote = async () => {
+    if (!isUnlocked) {
+      openUnlockModal('Session Notes & Tags')
+      return
+    }
+    if (!selectedSessionId || !window.electronAPI?.saveSessionNote) return
+    setIsSavingNote(true)
+    try {
+      await window.electronAPI.saveSessionNote({ sessionId: selectedSessionId, note: sessionNote.trim() })
+      loadSessions()
+    } catch (err) {
+      console.error('Failed to save session note:', err)
+    } finally {
+      setIsSavingNote(false)
+    }
+  }
 
   const sortedSessions = useMemo(() => {
     const valid = sessions.filter((s) => (s.turnCount || 0) > 0 && (s.totalTokens || 0) > 0)
@@ -119,8 +143,11 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
 
   const [copiedSessionMarkdown, setCopiedSessionMarkdown] = useState(false)
 
-  const handleExportSessionCsv = () => {
+  const handleExportSessionCsv = async () => {
     if (!selectedSession || turns.length === 0) return
+    const allowed = await checkAndRecordExport()
+    if (!allowed) return
+
     exportToCsv(
       `session_${selectedSession.externalId || selectedSession.id}_turns`,
       [
@@ -136,8 +163,11 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
     )
   }
 
-  const handleExportSessionJson = () => {
+  const handleExportSessionJson = async () => {
     if (!selectedSession || turns.length === 0) return
+    const allowed = await checkAndRecordExport()
+    if (!allowed) return
+
     exportToJson(
       `session_${selectedSession.externalId || selectedSession.id}_turns`,
       { session: selectedSession, turns }
@@ -146,6 +176,8 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
 
   const handleCopySessionMarkdown = async () => {
     if (!selectedSession || turns.length === 0) return
+    const allowed = await checkAndRecordExport()
+    if (!allowed) return
     const success = await copyMarkdownTable(
       `Session Telemetry — ${selectedSession.externalId || selectedSession.id}`,
       {
@@ -285,6 +317,13 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
                       <span className="truncate max-w-[170px]">{session.model}</span>
                       <span>{formatDate(session.startTime).split(',')[0]}</span>
                     </div>
+
+                    {session.notes && (
+                      <div className="mt-2 pt-1.5 border-t border-[#141414] flex items-center gap-1 text-[10px] text-amber-400 font-mono">
+                        <Tag className="w-2.5 h-2.5 text-amber-400/70 shrink-0" />
+                        <span className="truncate">{session.notes}</span>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -377,6 +416,44 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
                   </div>
                 )}
               </div>
+
+              {/* QoL 9: Session Notes & Tags Bar */}
+              {selectedSession && (
+                <div className="mt-3 pt-2.5 border-t border-[#1a1a1a] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 flex-1 max-w-lg">
+                    <Tag className="w-3 h-3 text-[#666666] shrink-0" />
+                    <input
+                      type="text"
+                      placeholder={isUnlocked ? "Add session notes or tags (e.g. bugfix, investigation)..." : "Session notes/tags"}
+                      value={sessionNote}
+                      onChange={(e) => setSessionNote(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveNote()
+                      }}
+                      disabled={!isUnlocked}
+                      className="bg-black border border-[#222222] rounded px-2.5 py-1 text-xs text-white placeholder:text-[#555555] w-full focus:outline-none focus:border-zinc-500 disabled:opacity-50"
+                    />
+                    {isUnlocked ? (
+                      <Button
+                        size="sm"
+                        onClick={handleSaveNote}
+                        disabled={isSavingNote}
+                        className="h-6 text-[11px] px-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold shrink-0"
+                      >
+                        {isSavingNote ? 'Saving...' : 'Save'}
+                      </Button>
+                    ) : (
+                      <LockedBadge featureName="Session Notes & Tags" label="Unlock Notes" />
+                    )}
+                  </div>
+                  {selectedSession.notes && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                      <Bookmark className="w-3 h-3 shrink-0" />
+                      <span className="truncate max-w-[200px]">{selectedSession.notes}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               {turns.length > 0 ? (

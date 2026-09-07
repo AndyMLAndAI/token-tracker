@@ -18,10 +18,33 @@ export function formatNumber(num: number): string {
   return num.toLocaleString()
 }
 
-export function formatCurrency(usd: number): string {
-  if (usd === 0) return '$0.00'
-  if (usd < 0.01) return '< $0.01'
-  return `$${usd.toFixed(2)}`
+export const CURRENCY_MAP: Record<string, { symbol: string; rate: number; label: string }> = {
+  USD: { symbol: '$', rate: 1.0, label: 'USD ($)' },
+  EUR: { symbol: '€', rate: 0.92, label: 'EUR (€)' },
+  GBP: { symbol: '£', rate: 0.79, label: 'GBP (£)' },
+  JPY: { symbol: '¥', rate: 155.0, label: 'JPY (¥)' },
+  CAD: { symbol: 'CA$', rate: 1.36, label: 'CAD ($)' },
+  AUD: { symbol: 'A$', rate: 1.52, label: 'AUD ($)' },
+}
+
+export function getCurrentCurrency(): string {
+  try {
+    return localStorage.getItem('token_tracker_currency') || 'USD'
+  } catch {
+    return 'USD'
+  }
+}
+
+export function formatCurrency(usd: number, customCurrency?: string): string {
+  const code = customCurrency || getCurrentCurrency()
+  const info = CURRENCY_MAP[code] || CURRENCY_MAP.USD
+  const converted = usd * info.rate
+  if (converted === 0) return `${info.symbol}0.00`
+  if (converted < 0.01) return `< ${info.symbol}0.01`
+  if (code === 'JPY') {
+    return `${info.symbol}${Math.round(converted).toLocaleString()}`
+  }
+  return `${info.symbol}${converted.toFixed(2)}`
 }
 
 export function formatDate(timestamp: number): string {

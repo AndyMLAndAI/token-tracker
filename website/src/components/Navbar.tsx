@@ -35,7 +35,7 @@ export function Navbar() {
             Token Tracker
           </span>
           <Badge variant="muted" className="text-[10px] font-mono px-1.5 py-0.5">
-            v1.7
+            v1.8
           </Badge>
         </Link>
 
@@ -79,7 +79,7 @@ export function Navbar() {
             <Button asChild size="sm" className="bg-white text-black font-semibold hover:bg-white/90">
               <Link href="/download" className="flex items-center gap-1.5">
                 <Download className="w-3.5 h-3.5" />
-                <span>Download v1.7</span>
+                <span>Download v1.8</span>
               </Link>
             </Button>
           </motion.div>

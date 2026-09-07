@@ -1,6 +1,6 @@
 {
   "name": "token-tracker-installer",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Token Tracker Setup",
   "author": "Token Tracker Project",
   "main": "main.js",
@@ -38,10 +38,10 @@
         }
       ],
       "icon": "assets/icon.ico",
-      "artifactName": "Token-Tracker-Setup-1.7.exe"
+      "artifactName": "Token-Tracker-Setup-1.8.exe"
     },
     "portable": {
-      "artifactName": "Token-Tracker-Setup-1.7.exe"
+      "artifactName": "Token-Tracker-Setup-1.8.exe"
     }
   }
 }

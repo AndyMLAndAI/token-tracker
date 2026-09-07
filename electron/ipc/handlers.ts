@@ -1,9 +1,17 @@
-import { app, ipcMain, BrowserWindow } from 'electron'
+import { app, ipcMain, BrowserWindow, shell } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
 import crypto from 'node:crypto'
-import { getDb, getAppSetting, setAppSetting } from '../db/database'
+import {
+  getDb,
+  getAppSetting,
+  setAppSetting,
+  isContributionUnlocked,
+  setContributionUnlocked,
+  getExportCount,
+  incrementExportCount,
+} from '../db/database'
 import { resolveAllSources } from '../ingestion/path-resolver'
 import { ingestClaudeStatsCache } from '../ingestion/claude-code'
 import { IngestionEngine } from '../ingestion/watcher'
@@ -234,6 +242,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
         s.start_time,
         s.external_id,
         s.provenance,
+        s.notes,
         COUNT(t.id) as turn_count,
         COALESCE(SUM(t.input_tokens + t.output_tokens), 0) as total_tokens,
         COALESCE(SUM(t.input_tokens), 0) as input_tokens,
@@ -258,6 +267,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
       startTime: Number(r.start_time),
       externalId: r.external_id ? `session_${r.external_id.slice(0, 8)}` : `session_${r.id.slice(0, 8)}`,
       provenance: r.provenance || 'exact',
+      notes: r.notes || '',
       turnCount: Number(r.turn_count),
       totalTokens: Number(r.total_tokens),
       inputTokens: Number(r.input_tokens),
@@ -685,5 +695,93 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
       console.warn('[Handlers] Failed to set login item settings:', err)
       return { success: false, error: err.message }
     }
+  })
+
+  // 13. Contribution Unlock & Export Gating
+  ipcMain.handle('getUnlockStatus', () => {
+    return {
+      unlocked: isContributionUnlocked(),
+      exportCount: getExportCount(),
+    }
+  })
+
+  ipcMain.handle('unlockFeatures', () => {
+    setContributionUnlocked(true)
+    mainWindow.webContents.send('unlock-status-changed', true)
+    return { success: true, unlocked: true }
+  })
+
+  ipcMain.handle('recordExportUse', () => {
+    const unlocked = isContributionUnlocked()
+    if (unlocked) {
+      return { allowed: true, count: getExportCount(), unlocked: true }
+    }
+    const currentCount = getExportCount()
+    if (currentCount >= 2) {
+      return { allowed: false, count: currentCount, unlocked: false }
+    }
+    const newCount = incrementExportCount()
+    return { allowed: true, count: newCount, unlocked: false }
+  })
+
+  ipcMain.handle('openContributionPage', () => {
+    shell.openExternal('https://gettokentracker.netlify.app/adcontribution')
+    // Trust-based unlock: immediately mark as unlocked locally
+    setContributionUnlocked(true)
+    mainWindow.webContents.send('unlock-status-changed', true)
+    return { success: true, unlocked: true }
+  })
+
+  // 14. Project Metadata & QoL Extras
+  ipcMain.handle('getProjectMetadata', () => {
+    const db = getDb()
+    const rows = db.prepare('SELECT project_id, nickname, is_pinned, custom_color FROM project_metadata').all() as any[]
+    const map: Record<string, { nickname?: string; isPinned: boolean; customColor?: string }> = {}
+    for (const r of rows) {
+      map[r.project_id] = {
+        nickname: r.nickname || undefined,
+        isPinned: Boolean(r.is_pinned),
+        customColor: r.custom_color || undefined,
+      }
+    }
+    return map
+  })
+
+  ipcMain.handle('setProjectNickname', (_event, { projectId, nickname }: { projectId: string; nickname: string }) => {
+    const db = getDb()
+    db.prepare(`
+      INSERT INTO project_metadata (project_id, nickname)
+      VALUES (?, ?)
+      ON CONFLICT(project_id) DO UPDATE SET nickname = excluded.nickname
+    `).run(projectId, nickname.trim())
+    return { success: true }
+  })
+
+  ipcMain.handle('togglePinProject', (_event, projectId: string) => {
+    const db = getDb()
+    const existing = db.prepare('SELECT is_pinned FROM project_metadata WHERE project_id = ?').get(projectId) as any
+    const newPinned = existing && existing.is_pinned ? 0 : 1
+    db.prepare(`
+      INSERT INTO project_metadata (project_id, is_pinned)
+      VALUES (?, ?)
+      ON CONFLICT(project_id) DO UPDATE SET is_pinned = excluded.is_pinned
+    `).run(projectId, newPinned)
+    return { success: true, isPinned: Boolean(newPinned) }
+  })
+
+  ipcMain.handle('setProjectColor', (_event, { projectId, color }: { projectId: string; color: string }) => {
+    const db = getDb()
+    db.prepare(`
+      INSERT INTO project_metadata (project_id, custom_color)
+      VALUES (?, ?)
+      ON CONFLICT(project_id) DO UPDATE SET custom_color = excluded.custom_color
+    `).run(projectId, color)
+    return { success: true }
+  })
+
+  ipcMain.handle('saveSessionNote', (_event, { sessionId, note }: { sessionId: string; note: string }) => {
+    const db = getDb()
+    db.prepare('UPDATE sessions SET notes = ? WHERE id = ?').run(note, sessionId)
+    return { success: true }
   })
 }

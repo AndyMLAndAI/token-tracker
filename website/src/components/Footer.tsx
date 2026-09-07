@@ -16,7 +16,7 @@ export function Footer() {
                 Token Tracker
               </span>
               <span className="text-[10px] font-mono border border-[#262626] rounded px-1.5 py-0.5 text-[#888888]">
-                v1.7
+                v1.8
               </span>
             </div>
             <p className="text-xs text-[#888888] max-w-sm leading-relaxed">
@@ -76,7 +76,7 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-6 border-t border-[#1a1a1a] flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#666666] gap-2">
-          <span>Token Tracker v1.7.0. Local-first software for developers.</span>
+          <span>Token Tracker v1.8.0. Local-first software for developers.</span>
           <span className="font-mono text-[#555555]">WCAG AA Compliant &bull; No Telemetry</span>
         </div>
       </div>

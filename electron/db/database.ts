@@ -93,6 +93,14 @@ export function initDatabase(customPath?: string): DatabaseSync {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS project_metadata (
+      project_id TEXT PRIMARY KEY,
+      nickname TEXT,
+      is_pinned INTEGER NOT NULL DEFAULT 0,
+      custom_color TEXT,
+      FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sessions_project_id ON sessions(project_id);
     CREATE INDEX IF NOT EXISTS idx_turns_session_id ON turns(session_id);
     CREATE INDEX IF NOT EXISTS idx_turns_timestamp ON turns(timestamp);
@@ -105,6 +113,9 @@ export function initDatabase(customPath?: string): DatabaseSync {
     const sessionCols = db.prepare('PRAGMA table_info(sessions)').all() as Array<{ name: string }>
     if (!sessionCols.some((c) => c.name === 'provenance')) {
       db.exec("ALTER TABLE sessions ADD COLUMN provenance TEXT NOT NULL DEFAULT 'exact';")
+    }
+    if (!sessionCols.some((c) => c.name === 'notes')) {
+      db.exec('ALTER TABLE sessions ADD COLUMN notes TEXT;')
     }
 
     const turnCols = db.prepare('PRAGMA table_info(turns)').all() as Array<{ name: string }>
@@ -154,3 +165,23 @@ export function setAppSetting(key: string, value: string): void {
     console.warn(`[Database] Failed to set setting "${key}":`, err)
   }
 }
+
+export function isContributionUnlocked(): boolean {
+  return getAppSetting('contribution_unlocked', 'false') === 'true'
+}
+
+export function setContributionUnlocked(unlocked: boolean): void {
+  setAppSetting('contribution_unlocked', unlocked ? 'true' : 'false')
+}
+
+export function getExportCount(): number {
+  return parseInt(getAppSetting('export_count', '0'), 10) || 0
+}
+
+export function incrementExportCount(): number {
+  const current = getExportCount()
+  const next = current + 1
+  setAppSetting('export_count', String(next))
+  return next
+}
+

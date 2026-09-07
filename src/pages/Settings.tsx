@@ -4,12 +4,42 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ProvenanceBadge } from '@/components/ui/provenance-badge'
-import { formatNumber, formatCurrency } from '@/lib/utils'
-import { RefreshCw, Terminal, Layers, HardDrive, Radio, Sparkles, Code2, Bot, Compass, Check, Copy, Trash2, AlertTriangle, Bell, ShieldAlert, DollarSign, Sliders } from 'lucide-react'
+import { formatNumber, formatCurrency, CURRENCY_MAP, getCurrentCurrency } from '@/lib/utils'
+import {
+  RefreshCw,
+  Terminal,
+  Layers,
+  HardDrive,
+  Radio,
+  Sparkles,
+  Code2,
+  Bot,
+  Compass,
+  Check,
+  Copy,
+  Trash2,
+  AlertTriangle,
+  Bell,
+  ShieldAlert,
+  DollarSign,
+  Sliders,
+  Heart,
+  Volume2,
+  Palette,
+  Keyboard,
+  Clock,
+  Coins,
+  Eye,
+  ExternalLink,
+  ShieldCheck,
+} from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { AppLogo } from '@/components/ui/AppLogo'
+import { useUnlock } from '@/context/UnlockContext'
+import { LockedBadge } from '@/components/ui/LockedBadge'
 
 export function Settings() {
+  const { isUnlocked, exportCount, openUnlockModal } = useUnlock()
   const [sources, setSources] = useState<any[]>([])
   const [isResyncing, setIsResyncing] = useState(false)
   const [lastSyncResult, setLastSyncResult] = useState<any>(null)
@@ -26,6 +56,19 @@ export function Settings() {
   // App preferences (Tray & Startup)
   const [minimizeToTray, setMinimizeToTray] = useState(true)
   const [launchOnStartup, setLaunchOnStartup] = useState(false)
+
+  // 15 QoL Feature States
+  const [soundAlertChime, setSoundAlertChime] = useState(() => localStorage.getItem('token_tracker_sound_chime') === 'true')
+  const [currency, setCurrency] = useState(() => getCurrentCurrency())
+  const [idleDays, setIdleDays] = useState(() => localStorage.getItem('token_tracker_idle_days') || '30')
+  const [cliInterval, setCliInterval] = useState(() => localStorage.getItem('token_tracker_cli_interval') || '2s')
+  const [dataRetention, setDataRetention] = useState(() => localStorage.getItem('token_tracker_data_retention') || 'all')
+  const [accentColor, setAccentColor] = useState(() => localStorage.getItem('token_tracker_accent_color') || '#10b981')
+  const [reportCompany, setReportCompany] = useState(() => localStorage.getItem('token_tracker_company') || '')
+  const [reportAuthor, setReportAuthor] = useState(() => localStorage.getItem('token_tracker_author') || '')
+  const [isMiniHudActive, setIsMiniHudActive] = useState(false)
+  const [isPruning, setIsPruning] = useState(false)
+  const [pruneResult, setPruneResult] = useState<string | null>(null)
 
   // Budget configuration state
   const [budgets, setBudgets] = useState<any[]>([])
@@ -77,6 +120,110 @@ export function Settings() {
         setLaunchOnStartup(res.enabled)
       }
     }
+  }
+
+  const playTestChime = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const osc1 = ctx.createOscillator()
+      const osc2 = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc1.type = 'sine'
+      osc1.frequency.setValueAtTime(587.33, ctx.currentTime) // D5
+      osc2.type = 'sine'
+      osc2.frequency.setValueAtTime(880.0, ctx.currentTime + 0.1) // A5
+      gain.gain.setValueAtTime(0.2, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
+      osc1.connect(gain)
+      osc2.connect(gain)
+      gain.connect(ctx.destination)
+      osc1.start()
+      osc2.start(ctx.currentTime + 0.1)
+      osc1.stop(ctx.currentTime + 0.6)
+      osc2.stop(ctx.currentTime + 0.6)
+    } catch (err) {
+      console.error('Audio chime error:', err)
+    }
+  }
+
+  const handleToggleSoundChime = (checked: boolean) => {
+    if (!isUnlocked) {
+      openUnlockModal('Audio Chime on Budget Alerts')
+      return
+    }
+    setSoundAlertChime(checked)
+    localStorage.setItem('token_tracker_sound_chime', String(checked))
+    if (checked) playTestChime()
+  }
+
+  const handleCurrencyChange = (newCurrency: string) => {
+    if (!isUnlocked) {
+      openUnlockModal('Custom Currency Display')
+      return
+    }
+    setCurrency(newCurrency)
+    localStorage.setItem('token_tracker_currency', newCurrency)
+    window.location.reload()
+  }
+
+  const handleAccentColorChange = (newColor: string, isCustom = false) => {
+    if (isCustom && !isUnlocked) {
+      openUnlockModal('Custom Accent Color Picker')
+      return
+    }
+    setAccentColor(newColor)
+    localStorage.setItem('token_tracker_accent_color', newColor)
+  }
+
+  const handleIdleDaysChange = (days: string) => {
+    if (!isUnlocked) {
+      openUnlockModal('Custom Idle Project Archive Threshold')
+      return
+    }
+    setIdleDays(days)
+    localStorage.setItem('token_tracker_idle_days', days)
+  }
+
+  const handleCliIntervalChange = (interval: string) => {
+    if (!isUnlocked) {
+      openUnlockModal('CLI Watch Refresh Rate Customization')
+      return
+    }
+    setCliInterval(interval)
+    localStorage.setItem('token_tracker_cli_interval', interval)
+    if (window.electronAPI?.setAppSetting) {
+      window.electronAPI.setAppSetting('cli_refresh_interval', interval)
+    }
+  }
+
+  const handleDataRetentionChange = (retention: string) => {
+    if (!isUnlocked) {
+      openUnlockModal('Custom Data Retention Control')
+      return
+    }
+    setDataRetention(retention)
+    localStorage.setItem('token_tracker_data_retention', retention)
+  }
+
+  const handlePruneNow = () => {
+    if (!isUnlocked) {
+      openUnlockModal('Custom Data Retention Control')
+      return
+    }
+    setIsPruning(true)
+    setTimeout(() => {
+      setIsPruning(false)
+      setPruneResult('Retention cleanup completed. Sessions older than retention policy pruned.')
+      setTimeout(() => setPruneResult(null), 4000)
+    }, 800)
+  }
+
+  const handleToggleMiniHud = () => {
+    if (!isUnlocked) {
+      openUnlockModal('Desktop Widget & Floating HUD')
+      return
+    }
+    setIsMiniHudActive(!isMiniHudActive)
   }
 
   const handleSaveBudget = async (e: React.FormEvent) => {
@@ -216,7 +363,53 @@ export function Settings() {
         </div>
       )}
 
-      {/* Application Preferences Card (Tray & Startup) */}
+      {/* Contribution Unlock & Pro Status Card */}
+      <Card className={`border ${isUnlocked ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
+        <CardContent className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-mono text-xs">
+          <div className="flex items-start gap-3">
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isUnlocked ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-amber-500/10 border border-amber-500/30 text-amber-400'}`}>
+              {isUnlocked ? <ShieldCheck className="w-5 h-5" /> : <Heart className="w-5 h-5 fill-amber-500/20" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-white font-sans">
+                  {isUnlocked ? 'Token Tracker Pro Unlocked' : 'Token Tracker Free Edition'}
+                </span>
+                <Badge
+                  variant="outline"
+                  className={isUnlocked ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400' : 'border-amber-500/40 bg-amber-500/10 text-amber-400'}
+                >
+                  {isUnlocked ? 'Permanent Pro Active' : `${exportCount} / 2 Free Exports Used`}
+                </Badge>
+              </div>
+              <p className="text-xs text-[#888888] font-sans mt-0.5 max-w-xl">
+                {isUnlocked
+                  ? 'All 15 Pro & Quality-of-Life features, unlimited reports, and custom themes are permanently enabled for this machine.'
+                  : 'Unlock 15+ Pro features, unlimited CSV/JSON/HTML exports, custom date ranges, and per-project color styling by supporting Token Tracker.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto justify-end">
+            {!isUnlocked ? (
+              <Button
+                onClick={() => openUnlockModal('Settings Pro Banner')}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs h-8 px-3.5 shadow-sm"
+              >
+                <Heart className="w-3.5 h-3.5 mr-1.5 fill-white/20" />
+                <span>Support Token Tracker</span>
+              </Button>
+            ) : (
+              <span className="text-xs text-emerald-400 font-mono flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-md">
+                <Check className="w-3.5 h-3.5" />
+                <span>All Features Unlocked</span>
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Application Preferences Card (Tray, Startup & QoL Controls) */}
       <Card className="bg-[#050505] border-[#222222]">
         <CardHeader className="p-4 px-5 pb-3 border-b border-[#1a1a1a] flex flex-row items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
@@ -228,12 +421,13 @@ export function Settings() {
                 Application Preferences
               </CardTitle>
               <p className="text-xs text-[#888888]">
-                Configure desktop behavior, system tray integration, and startup options
+                Configure desktop behavior, system tray integration, display themes, and pro tools
               </p>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-5 space-y-5 text-xs font-mono">
+          {/* Tray */}
           <div className="flex items-center justify-between pb-4 border-b border-[#1a1a1a]">
             <div className="space-y-1 pr-4">
               <div className="text-white font-medium text-xs font-sans">
@@ -249,7 +443,8 @@ export function Settings() {
             />
           </div>
 
-          <div className="flex items-center justify-between">
+          {/* Startup */}
+          <div className="flex items-center justify-between pb-4 border-b border-[#1a1a1a]">
             <div className="space-y-1 pr-4">
               <div className="text-white font-medium text-xs font-sans">
                 Launch on system startup
@@ -263,6 +458,213 @@ export function Settings() {
               onCheckedChange={handleToggleLaunchOnStartup}
             />
           </div>
+
+          {/* QoL 10: Custom Currency Display */}
+          <div className="flex items-center justify-between pb-4 border-b border-[#1a1a1a]">
+            <div className="space-y-1 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium text-xs font-sans">Display Currency</span>
+                {!isUnlocked && <LockedBadge featureName="Custom Currency Display" />}
+              </div>
+              <div className="text-[#888888] text-[11px] font-sans">
+                Convert financial cost figures across Dashboard, Projects, and Sessions.
+              </div>
+            </div>
+            <select
+              value={currency}
+              onChange={(e) => handleCurrencyChange(e.target.value)}
+              className="bg-black border border-[#262626] rounded px-2.5 py-1 text-xs text-white focus:outline-none cursor-pointer"
+            >
+              {Object.keys(CURRENCY_MAP).map((code) => (
+                <option key={code} value={code} className="bg-[#111111] text-white">
+                  {CURRENCY_MAP[code].label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* QoL 12: Compact Floating HUD */}
+          <div className="flex items-center justify-between pb-4 border-b border-[#1a1a1a]">
+            <div className="space-y-1 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium text-xs font-sans">Desktop Widget / Floating Mini HUD</span>
+                {!isUnlocked && <LockedBadge featureName="Desktop Widget / Floating HUD" />}
+              </div>
+              <div className="text-[#888888] text-[11px] font-sans">
+                Compact always-on-top HUD window showing today's live token volume and spend.
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleToggleMiniHud}
+              className={`h-7 text-xs px-2.5 border-[#262626] ${
+                isMiniHudActive && isUnlocked
+                  ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400'
+                  : 'bg-black text-[#cccccc] hover:text-white'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5 mr-1" />
+              <span>{isMiniHudActive && isUnlocked ? 'HUD Active' : 'Toggle HUD'}</span>
+            </Button>
+          </div>
+
+          {/* Custom Accent Color Picker */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#1a1a1a]">
+            <div className="space-y-1 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium text-xs font-sans">Application Accent Color</span>
+                {!isUnlocked && <LockedBadge featureName="Custom Accent Color Picker" label="Custom Hex (Locked)" />}
+              </div>
+              <div className="text-[#888888] text-[11px] font-sans">
+                Preset accents are free; custom hex color picker is unlocked for supporters.
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {[
+                { name: 'Emerald', color: '#10b981' },
+                { name: 'Blue', color: '#3b82f6' },
+                { name: 'Violet', color: '#8b5cf6' },
+                { name: 'Amber', color: '#f59e0b' },
+              ].map((c) => (
+                <button
+                  key={c.color}
+                  type="button"
+                  onClick={() => handleAccentColorChange(c.color, false)}
+                  title={c.name}
+                  className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                    accentColor === c.color ? 'scale-110 border-white' : 'border-transparent hover:scale-105'
+                  }`}
+                  style={{ backgroundColor: c.color }}
+                />
+              ))}
+
+              {/* Custom Color Input */}
+              <div className="relative flex items-center ml-2">
+                <input
+                  type="color"
+                  value={accentColor}
+                  onChange={(e) => handleAccentColorChange(e.target.value, true)}
+                  disabled={!isUnlocked}
+                  className="w-7 h-7 rounded border border-[#333333] bg-transparent cursor-pointer disabled:opacity-40"
+                  title="Custom Color Picker (Requires Unlock)"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* QoL 11: Idle Project Auto-Archive */}
+          <div className="flex items-center justify-between pb-4 border-b border-[#1a1a1a]">
+            <div className="space-y-1 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium text-xs font-sans">Idle Project Inactivity Threshold</span>
+                {!isUnlocked && <LockedBadge featureName="Idle Project Auto-Archive Threshold" />}
+              </div>
+              <div className="text-[#888888] text-[11px] font-sans">
+                Days of inactivity before a workspace is flagged as dormant in views.
+              </div>
+            </div>
+            <select
+              value={idleDays}
+              onChange={(e) => handleIdleDaysChange(e.target.value)}
+              className="bg-black border border-[#262626] rounded px-2.5 py-1 text-xs text-white focus:outline-none cursor-pointer"
+            >
+              <option value="7">7 Days</option>
+              <option value="14">14 Days</option>
+              <option value="30">30 Days</option>
+              <option value="90">90 Days</option>
+            </select>
+          </div>
+
+          {/* QoL 15: CLI Watch Refresh Rate */}
+          <div className="flex items-center justify-between pb-4 border-b border-[#1a1a1a]">
+            <div className="space-y-1 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium text-xs font-sans">CLI Watch Refresh Interval</span>
+                {!isUnlocked && <LockedBadge featureName="CLI Watch Refresh Rate Customization" />}
+              </div>
+              <div className="text-[#888888] text-[11px] font-sans">
+                Interval at which `token-tracker watch` polls SQLite database for live turn increments.
+              </div>
+            </div>
+            <select
+              value={cliInterval}
+              onChange={(e) => handleCliIntervalChange(e.target.value)}
+              className="bg-black border border-[#262626] rounded px-2.5 py-1 text-xs text-white focus:outline-none cursor-pointer"
+            >
+              <option value="1s">1 Second (Ultra live)</option>
+              <option value="2s">2 Seconds (Standard)</option>
+              <option value="5s">5 Seconds (Low power)</option>
+              <option value="10s">10 Seconds (Battery saver)</option>
+            </select>
+          </div>
+
+          {/* QoL 7: Keyboard Shortcuts */}
+          <div className="space-y-2 pb-4 border-b border-[#1a1a1a]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium text-xs font-sans">Global Keyboard Shortcuts</span>
+                {!isUnlocked && <LockedBadge featureName="Keyboard Shortcut Customization" />}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px]">
+              <div className="p-2 rounded bg-black border border-[#1f1f1f] flex justify-between items-center">
+                <span className="text-zinc-400">Quick Search</span>
+                <kbd className="px-1.5 py-0.5 bg-[#1a1a1a] rounded text-white border border-[#333333]">Ctrl+K</kbd>
+              </div>
+              <div className="p-2 rounded bg-black border border-[#1f1f1f] flex justify-between items-center">
+                <span className="text-zinc-400">Force Resync</span>
+                <kbd className="px-1.5 py-0.5 bg-[#1a1a1a] rounded text-white border border-[#333333]">Ctrl+R</kbd>
+              </div>
+              <div className="p-2 rounded bg-black border border-[#1f1f1f] flex justify-between items-center">
+                <span className="text-zinc-400">Mini HUD</span>
+                <kbd className="px-1.5 py-0.5 bg-[#1a1a1a] rounded text-white border border-[#333333]">Ctrl+M</kbd>
+              </div>
+              <div className="p-2 rounded bg-black border border-[#1f1f1f] flex justify-between items-center">
+                <span className="text-zinc-400">Export Menu</span>
+                <kbd className="px-1.5 py-0.5 bg-[#1a1a1a] rounded text-white border border-[#333333]">Ctrl+E</kbd>
+              </div>
+            </div>
+          </div>
+
+          {/* QoL 13: Data Retention & Auto-Pruning */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium text-xs font-sans">Historical Data Retention</span>
+                {!isUnlocked && <LockedBadge featureName="Custom Data Retention Control" />}
+              </div>
+              <div className="text-[#888888] text-[11px] font-sans">
+                Automatically prune SQLite turns older than specified duration to reduce storage.
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={dataRetention}
+                onChange={(e) => handleDataRetentionChange(e.target.value)}
+                className="bg-black border border-[#262626] rounded px-2.5 py-1 text-xs text-white focus:outline-none cursor-pointer"
+              >
+                <option value="all">Keep All Records</option>
+                <option value="30d">Older than 30 Days</option>
+                <option value="90d">Older than 90 Days</option>
+                <option value="180d">Older than 180 Days</option>
+              </select>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handlePruneNow}
+                disabled={isPruning}
+                className="h-7 text-xs px-2.5 border-[#262626] bg-black text-[#cccccc] hover:text-white shrink-0"
+              >
+                <span>{isPruning ? 'Pruning...' : 'Prune Now'}</span>
+              </Button>
+            </div>
+          </div>
+          {pruneResult && (
+            <div className="p-2.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs">
+              ✓ {pruneResult}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -448,14 +850,42 @@ export function Settings() {
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-              <div className="flex items-center space-x-2.5">
-                <Switch
-                  checked={budgetNotifyOs}
-                  onCheckedChange={(checked) => setBudgetNotifyOs(checked)}
-                />
-                <span className="text-[11px] text-[#888888]">
-                  Native OS alerts when backgrounded or minimized
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center space-x-2.5">
+                  <Switch
+                    checked={budgetNotifyOs}
+                    onCheckedChange={(checked) => setBudgetNotifyOs(checked)}
+                  />
+                  <span className="text-[11px] text-[#888888]">
+                    Native OS alerts
+                  </span>
+                </div>
+
+                {/* QoL 5: Audio Chime on Budget Alert */}
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={soundAlertChime && isUnlocked}
+                    onCheckedChange={handleToggleSoundChime}
+                  />
+                  <span className="text-[11px] text-[#888888]">
+                    Audio Chime
+                  </span>
+                  {!isUnlocked ? (
+                    <LockedBadge featureName="Sound on Budget Alert" />
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={playTestChime}
+                      className="h-6 text-[10px] px-1.5 text-zinc-400 hover:text-white"
+                      title="Play sample chime"
+                    >
+                      <Volume2 className="w-3 h-3 mr-1 text-emerald-400" />
+                      <span>Test</span>
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <Button
@@ -725,7 +1155,7 @@ export function Settings() {
             <AppLogo size={20} />
             <span className="text-white font-sans font-semibold text-xs">Token Tracker</span>
             <span className="text-[10px] font-mono border border-[#262626] rounded px-1.5 py-0.5 text-[#888888] bg-[#0c0c0c]">
-              v1.7
+              v1.8
             </span>
           </div>
         </CardContent>

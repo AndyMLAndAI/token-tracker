@@ -63,6 +63,34 @@ export function exportToJson(filename: string, data: any): void {
 }
 
 /**
+ * Exports data to a downloaded Markdown file.
+ */
+export function exportToMarkdown(filename: string, title: string, columns: CsvColumn[], data: any[]): void {
+  let md = `# ${title}\n\n`
+  md += `*Exported on ${new Date().toLocaleString()}*\n\n`
+  md += `| ${columns.map((c) => c.label).join(' | ')} |\n`
+  md += `| ${columns.map(() => '---').join(' | ')} |\n`
+
+  for (const row of data) {
+    const cells = columns.map((col) => {
+      const val = col.format ? col.format(row[col.key], row) : row[col.key]
+      return String(val ?? '').replace(/\|/g, '\\|')
+    })
+    md += `| ${cells.join(' | ')} |\n`
+  }
+
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename.endsWith('.md') ? filename : `${filename}.md`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+/**
  * Copies a markdown table summary to clipboard.
  */
 export async function copyMarkdownTable(
@@ -141,16 +169,21 @@ export interface ReportData {
 /**
  * Generates and downloads a standalone, print-ready HTML expense and telemetry report.
  */
-export function generatePrintableHtmlReport(report: ReportData): void {
+export function generatePrintableHtmlReport(
+  report: ReportData,
+  branding?: { company?: string; author?: string; title?: string }
+): void {
   const startStr = report.startDate > 0 ? new Date(report.startDate).toLocaleDateString() : 'Beginning of records'
   const endStr = new Date(report.endDate).toLocaleDateString()
   const generatedAt = new Date().toLocaleString()
+  const reportTitle = branding?.title?.trim() || 'Token Tracker — AI Telemetry & Expense Report'
+  const brandingMeta = [branding?.author?.trim(), branding?.company?.trim()].filter(Boolean).join(' · ')
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Token Tracker Report — ${startStr} to ${endStr}</title>
+  <title>${reportTitle} — ${startStr} to ${endStr}</title>
   <style>
     :root {
       --bg: #ffffff;
@@ -179,26 +212,32 @@ export function generatePrintableHtmlReport(report: ReportData): void {
       padding: 32px;
     }
     .container {
-      max-width: 960px;
+      max-width: 900px;
       margin: 0 auto;
     }
     header {
-      border-bottom: 2px solid var(--border);
-      padding-bottom: 20px;
-      margin-bottom: 28px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 24px;
     }
     h1 {
+      font-size: 22px;
+      font-weight: 700;
       margin: 0 0 6px 0;
-      font-size: 24px;
-      font-weight: 600;
       letter-spacing: -0.02em;
     }
     .meta {
       color: var(--muted);
       font-size: 13px;
+    }
+    .branding-sub {
+      color: var(--emerald);
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 4px;
     }
     .btn {
       background: #000000;
@@ -258,13 +297,12 @@ export function generatePrintableHtmlReport(report: ReportData): void {
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      background: rgba(0, 0, 0, 0.02);
       color: var(--muted);
-      background: var(--card-bg);
     }
-    .num {
+    td.num, th.num {
       text-align: right;
       font-family: monospace;
-      font-variant-numeric: tabular-nums;
     }
     footer {
       border-top: 1px solid var(--border);
@@ -302,8 +340,9 @@ export function generatePrintableHtmlReport(report: ReportData): void {
   <div class="container">
     <header>
       <div>
-        <h1>Token Tracker — AI Telemetry & Expense Report</h1>
+        <h1>${reportTitle}</h1>
         <div class="meta">Period: <strong>${startStr}</strong> — <strong>${endStr}</strong></div>
+        ${brandingMeta ? `<div class="branding-sub">Prepared by ${brandingMeta}</div>` : ''}
       </div>
       <div class="no-print">
         <button class="btn" onclick="window.print()">Print / Save as PDF</button>
@@ -328,8 +367,8 @@ export function generatePrintableHtmlReport(report: ReportData): void {
         <div class="card-value">${formatNumber(report.totals.outputTokens)}</div>
       </div>
       <div class="card">
-        <div class="card-label">Cache Read Tokens</div>
-        <div class="card-value">${formatNumber(report.totals.cacheReadTokens)}</div>
+        <div class="card-label">Cached Tokens</div>
+        <div class="card-value">${formatNumber(report.totals.cacheReadTokens + report.totals.cacheCreationTokens)}</div>
       </div>
       <div class="card">
         <div class="card-label">Turn Count</div>
@@ -337,7 +376,7 @@ export function generatePrintableHtmlReport(report: ReportData): void {
       </div>
     </div>
 
-    <h2>Breakdown by Project (${report.projectBreakdown.length})</h2>
+    <h2>Breakdown by Project</h2>
     <table>
       <thead>
         <tr>
@@ -350,30 +389,26 @@ export function generatePrintableHtmlReport(report: ReportData): void {
         </tr>
       </thead>
       <tbody>
-        ${
-          report.projectBreakdown.length > 0
-            ? report.projectBreakdown
-                .map(
-                  (p) => `<tr>
-              <td><strong>${p.name}</strong></td>
-              <td><code>${p.toolSource}</code></td>
-              <td class="num">${p.sessionsCount}</td>
-              <td class="num">${p.turnCount}</td>
-              <td class="num">${formatNumber(p.totalTokens)}</td>
-              <td class="num"><strong>${formatCurrency(p.totalCost)}</strong></td>
-            </tr>`
-                )
-                .join('')
-            : '<tr><td colspan="6" style="text-align:center; color: var(--muted);">No project activity in this period.</td></tr>'
-        }
+        ${report.projectBreakdown
+          .map(
+            (p) => `<tr>
+          <td><strong>${p.name}</strong></td>
+          <td>${p.toolSource}</td>
+          <td class="num">${p.sessionsCount}</td>
+          <td class="num">${p.turnCount}</td>
+          <td class="num">${formatNumber(p.totalTokens)}</td>
+          <td class="num"><strong>${formatCurrency(p.totalCost)}</strong></td>
+        </tr>`
+          )
+          .join('')}
       </tbody>
     </table>
 
-    <h2>Breakdown by Coding Agent / Tool</h2>
+    <h2>Breakdown by Tool / Source</h2>
     <table>
       <thead>
         <tr>
-          <th>Agent / Tool</th>
+          <th>Tool Source</th>
           <th class="num">Turns</th>
           <th class="num">Total Tokens</th>
           <th class="num">Cost (USD)</th>
@@ -418,7 +453,7 @@ export function generatePrintableHtmlReport(report: ReportData): void {
     </table>
 
     <footer>
-      <span>Generated by Token Tracker (Exact Local Telemetry)</span>
+      <span>Generated by Token Tracker ${brandingMeta ? `(${brandingMeta})` : '(Exact Local Telemetry)'}</span>
       <span>${generatedAt}</span>
     </footer>
   </div>

@@ -4,6 +4,8 @@ import { Dashboard } from '@/pages/Dashboard'
 import { Projects } from '@/pages/Projects'
 import { SessionDetail } from '@/pages/SessionDetail'
 import { Settings } from '@/pages/Settings'
+import { UnlockProvider } from '@/context/UnlockContext'
+import { UnlockModal } from '@/components/UnlockModal'
 
 export function App() {
   const [activePage, setActivePage] = useState<PageId>('dashboard')
@@ -28,26 +30,29 @@ export function App() {
   }
 
   return (
-    <Shell
-      activePage={activePage}
-      setActivePage={setActivePage}
-      selectedProjectId={selectedProjectId}
-      setSelectedProjectId={setSelectedProjectId}
-    >
-      {activePage === 'dashboard' && (
-        <Dashboard onSelectProject={handleSelectProject} />
-      )}
-      {activePage === 'projects' && (
-        <Projects onSelectProject={handleSelectProject} />
-      )}
-      {activePage === 'session-detail' && selectedProjectId && (
-        <SessionDetail
-          projectId={selectedProjectId}
-          onBack={() => setActivePage('projects')}
-        />
-      )}
-      {activePage === 'settings' && <Settings />}
-    </Shell>
+    <UnlockProvider>
+      <Shell
+        activePage={activePage}
+        setActivePage={setActivePage}
+        selectedProjectId={selectedProjectId}
+        setSelectedProjectId={setSelectedProjectId}
+      >
+        {activePage === 'dashboard' && (
+          <Dashboard onSelectProject={handleSelectProject} />
+        )}
+        {activePage === 'projects' && (
+          <Projects onSelectProject={handleSelectProject} />
+        )}
+        {activePage === 'session-detail' && selectedProjectId && (
+          <SessionDetail
+            projectId={selectedProjectId}
+            onBack={() => setActivePage('projects')}
+          />
+        )}
+        {activePage === 'settings' && <Settings />}
+      </Shell>
+      <UnlockModal />
+    </UnlockProvider>
   )
 }
 

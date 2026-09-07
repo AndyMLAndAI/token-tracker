@@ -58,7 +58,7 @@ All ingested data is stored locally in a SQLite database on your machine. Nothin
 
 ## Status
 
-This is an early release (v1.7.0) and my first project at this scale — it works and I use it daily, but there will be rough edges. Bug reports and feedback are genuinely welcome via [Issues](https://github.com/AndyMLAndAI/token-tracker/issues).
+This is an early release (v1.8.0) and my first project at this scale — it works and I use it daily, but there will be rough edges. Bug reports and feedback are genuinely welcome via [Issues](https://github.com/AndyMLAndAI/token-tracker/issues).
 
 **Currently Windows-only.** macOS/Linux support is on the roadmap.
 

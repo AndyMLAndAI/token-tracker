@@ -70,7 +70,7 @@ export default function HomePage() {
         <FadeIn delay={0.05} yOffset={12}>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#262626] bg-[#0c0c0c] text-xs text-[#a1a1aa] transition-colors hover:border-[#3a3a3a]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-            <span className="font-mono text-[11px] text-[#e4e4e7]">v1.7 Released</span>
+            <span className="font-mono text-[11px] text-[#e4e4e7]">v1.8 Released</span>
             <span className="text-[#52525b]">&bull;</span>
             <span>100% Local &bull; Zero Cloud Telemetry</span>
           </div>
@@ -382,7 +382,7 @@ export default function HomePage() {
               <Button asChild size="lg" className="bg-white text-black font-semibold hover:bg-white/90 h-11 px-6 shadow-lg shadow-white/5">
                 <Link href="/download" className="flex items-center gap-2">
                   <Download className="w-4 h-4" />
-                  <span>Get Token Tracker v1.7</span>
+                  <span>Get Token Tracker v1.8</span>
                 </Link>
               </Button>
             </motion.div>

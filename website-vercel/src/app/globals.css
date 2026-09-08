@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: var(--font-lora), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-canvas: #f0eee6;
+  --color-card-light: #faf9f5;
+  --color-manilla: #f5e3c7;
+  --color-oat: #e3dacc;
+  --color-slate-dark: #141413;
+  --color-slate-muted: #57564f;
+  --color-cloud: #b0aea5;
+  --color-stone-border: #cccbc8;
+
+  --color-emerald-accent: #10b981;
+  --color-emerald-deep: #059669;
+}
+
+:root {
+  --canvas: #f0eee6;
+  --card-light: #faf9f5;
+  --manilla: #f5e3c7;
+  --oat: #e3dacc;
+  --slate-dark: #141413;
+  --slate-muted: #57564f;
+  --cloud: #b0aea5;
+  --stone-border: #cccbc8;
+  --emerald-accent: #10b981;
+  --emerald-deep: #059669;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: #f0eee6;
+}
+
+body {
+  background-color: #f0eee6;
+  color: #141413;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  caret-color: #10b981;
+}
+
+/* Browser surface theming */
+::selection {
+  background-color: #10b981;
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}
+
+/* Persistent inline link styles with intentional offset */
+.prose-link {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: rgba(20, 20, 19, 0.4);
+  transition: text-decoration-color 0.15s ease, color 0.15s ease;
+}
+
+.prose-link:hover {
+  text-decoration-color: #141413;
+}
+
+/* Subtle editorial scrollbar */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: #f0eee6;
+}
+::-webkit-scrollbar-thumb {
+  background: #cccbc8;
+  border-radius: 4px;
+  border: 2px solid #f0eee6;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b0aea5;
+}

@@ -13,6 +13,7 @@ export interface ElectronAPI {
   getProxyStatus: () => Promise<{ running: boolean; port: number; interceptedTurns: number }>
   captureScreenshot: (screenName: string) => Promise<{ success: boolean; path?: string; error?: string }>
   clearTokenUsage: () => Promise<{ success: boolean; error?: string }>
+  pruneData: (days: number) => Promise<{ success: boolean; deletedTurns: number; error?: string }>
   getBudgets: () => Promise<any[]>
   getBudgetStatus: () => Promise<any | null>
   saveBudget: (data: any) => Promise<{ success: boolean; id?: string; error?: string }>
@@ -56,6 +57,7 @@ const api: ElectronAPI = {
   getProxyStatus: () => ipcRenderer.invoke('getProxyStatus'),
   captureScreenshot: (screenName: string) => ipcRenderer.invoke('captureScreenshot', screenName),
   clearTokenUsage: () => ipcRenderer.invoke('clearTokenUsage'),
+  pruneData: (days: number) => ipcRenderer.invoke('pruneData', days),
   getBudgets: () => ipcRenderer.invoke('getBudgets'),
   getBudgetStatus: () => ipcRenderer.invoke('getBudgetStatus'),
   saveBudget: (data: any) => ipcRenderer.invoke('saveBudget', data),

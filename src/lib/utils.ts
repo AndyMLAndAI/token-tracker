@@ -18,13 +18,15 @@ export function formatNumber(num: number): string {
   return num.toLocaleString()
 }
 
+// Approximate reference exchange rates relative to USD.
+// Note: Rates are static approximations for cost estimation and are not live forex feeds.
 export const CURRENCY_MAP: Record<string, { symbol: string; rate: number; label: string }> = {
   USD: { symbol: '$', rate: 1.0, label: 'USD ($)' },
-  EUR: { symbol: '€', rate: 0.92, label: 'EUR (€)' },
-  GBP: { symbol: '£', rate: 0.79, label: 'GBP (£)' },
-  JPY: { symbol: '¥', rate: 155.0, label: 'JPY (¥)' },
-  CAD: { symbol: 'CA$', rate: 1.36, label: 'CAD ($)' },
-  AUD: { symbol: 'A$', rate: 1.52, label: 'AUD ($)' },
+  EUR: { symbol: '€', rate: 0.92, label: 'EUR (€ approx.)' },
+  GBP: { symbol: '£', rate: 0.79, label: 'GBP (£ approx.)' },
+  JPY: { symbol: '¥', rate: 155.0, label: 'JPY (¥ approx.)' },
+  CAD: { symbol: 'CA$', rate: 1.36, label: 'CAD ($ approx.)' },
+  AUD: { symbol: 'A$', rate: 1.52, label: 'AUD ($ approx.)' },
 }
 
 export function getCurrentCurrency(): string {

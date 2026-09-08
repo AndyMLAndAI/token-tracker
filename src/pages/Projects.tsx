@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ProvenanceBadge } from '@/components/ui/provenance-badge'
-import { formatNumber, formatCurrency, formatRelativeTime } from '@/lib/utils'
+import { formatNumber, formatRelativeTime } from '@/lib/utils'
+import { useCurrency } from '@/context/CurrencyContext'
 import { exportToCsv, exportToJson, copyMarkdownTable } from '@/lib/export'
 import {
   Search,
@@ -43,6 +44,7 @@ function getToolDisplayName(toolSource: string): string {
 
 export function Projects({ onSelectProject }: ProjectsProps) {
   const { isUnlocked, checkAndRecordExport, openUnlockModal } = useUnlock()
+  const { formatCurrency } = useCurrency()
   const [projects, setProjects] = useState<any[]>([])
   const [projectMeta, setProjectMeta] = useState<Record<string, { nickname?: string; isPinned: boolean; customColor?: string }>>({})
   const [searchQuery, setSearchQuery] = useState('')

@@ -41,6 +41,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
     const oneDayAgo = now - 24 * 60 * 60 * 1000
     const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000
     const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000
+    const todayStart = new Date().setHours(0, 0, 0, 0)
 
     // Today tokens
     const todayStmt = db.prepare(`
@@ -148,6 +149,18 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
     `)
     const dailyRows = dailyStmt.all(oneMonthAgo) as any[]
 
+    // Hourly breakdown for today's sparkline
+    const hourlyTodayStmt = db.prepare(`
+      SELECT 
+        strftime('%H', timestamp / 1000, 'unixepoch', 'localtime') as hour,
+        COALESCE(SUM(input_tokens + output_tokens), 0) as tokens
+      FROM turns
+      WHERE timestamp >= ?
+      GROUP BY hour
+      ORDER BY hour ASC
+    `)
+    const hourlyTodayRows = hourlyTodayStmt.all(todayStart) as any[]
+
     // Historical stats cache from Claude Code
     const statsCache = ingestClaudeStatsCache()
 
@@ -184,6 +197,10 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
         total: Number(r.total_tokens),
         cost: Number(r.cost),
       })),
+      hourlyToday: hourlyTodayRows.map((r) => ({
+        hour: r.hour,
+        tokens: Number(r.tokens),
+      })),
       claudeStatsCache: statsCache,
     }
   })
@@ -205,7 +222,18 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
         COALESCE(SUM(t.cache_read_tokens), 0) as cache_read_tokens,
         COALESCE(SUM(t.cost_usd), 0) as total_cost,
         COALESCE(MAX(t.timestamp), p.created_at) as last_activity,
-        COALESCE(MAX(t.provenance), 'exact') as provenance
+        COALESCE(
+          (
+            SELECT t2.provenance 
+            FROM sessions s2 
+            JOIN turns t2 ON t2.session_id = s2.id 
+            WHERE s2.project_id = p.id AND t2.provenance IS NOT NULL
+            GROUP BY t2.provenance 
+            ORDER BY COUNT(t2.id) DESC 
+            LIMIT 1
+          ),
+          'exact'
+        ) as provenance
       FROM projects p
       LEFT JOIN sessions s ON s.project_id = p.id
       LEFT JOIN turns t ON t.session_id = s.id
@@ -417,6 +445,30 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
     } catch (err: any) {
       console.error('[Database] Error clearing token usage:', err)
       return { success: false, error: err.message }
+    }
+  })
+
+  // 9b. Prune Historical Data based on retention days
+  ipcMain.handle('pruneData', async (_event, days: number) => {
+    try {
+      if (!days || isNaN(days) || days <= 0) {
+        return { success: false, error: 'Invalid retention period', deletedTurns: 0 }
+      }
+      const db = getDb()
+      const cutoff = Date.now() - days * 24 * 60 * 60 * 1000
+      const res = db.prepare('DELETE FROM turns WHERE timestamp < ?').run(cutoff) as any
+      db.exec(`
+        DELETE FROM sessions WHERE id NOT IN (SELECT DISTINCT session_id FROM turns);
+        DELETE FROM projects WHERE id NOT IN (SELECT DISTINCT project_id FROM sessions);
+      `)
+      console.log(`[Database] Pruned ${res.changes || 0} turns older than ${days} days (cutoff: ${cutoff}).`)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('data-updated')
+      }
+      return { success: true, deletedTurns: res.changes || 0 }
+    } catch (err: any) {
+      console.error('[Database] Error pruning data:', err)
+      return { success: false, error: err.message, deletedTurns: 0 }
     }
   })
 

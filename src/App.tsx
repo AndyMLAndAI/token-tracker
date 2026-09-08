@@ -5,6 +5,7 @@ import { Projects } from '@/pages/Projects'
 import { SessionDetail } from '@/pages/SessionDetail'
 import { Settings } from '@/pages/Settings'
 import { UnlockProvider } from '@/context/UnlockContext'
+import { CurrencyProvider } from '@/context/CurrencyContext'
 import { UnlockModal } from '@/components/UnlockModal'
 
 export function App() {
@@ -31,27 +32,29 @@ export function App() {
 
   return (
     <UnlockProvider>
-      <Shell
-        activePage={activePage}
-        setActivePage={setActivePage}
-        selectedProjectId={selectedProjectId}
-        setSelectedProjectId={setSelectedProjectId}
-      >
-        {activePage === 'dashboard' && (
-          <Dashboard onSelectProject={handleSelectProject} />
-        )}
-        {activePage === 'projects' && (
-          <Projects onSelectProject={handleSelectProject} />
-        )}
-        {activePage === 'session-detail' && selectedProjectId && (
-          <SessionDetail
-            projectId={selectedProjectId}
-            onBack={() => setActivePage('projects')}
-          />
-        )}
-        {activePage === 'settings' && <Settings />}
-      </Shell>
-      <UnlockModal />
+      <CurrencyProvider>
+        <Shell
+          activePage={activePage}
+          setActivePage={setActivePage}
+          selectedProjectId={selectedProjectId}
+          setSelectedProjectId={setSelectedProjectId}
+        >
+          {activePage === 'dashboard' && (
+            <Dashboard onSelectProject={handleSelectProject} />
+          )}
+          {activePage === 'projects' && (
+            <Projects onSelectProject={handleSelectProject} />
+          )}
+          {activePage === 'session-detail' && selectedProjectId && (
+            <SessionDetail
+              projectId={selectedProjectId}
+              onBack={() => setActivePage('projects')}
+            />
+          )}
+          {activePage === 'settings' && <Settings />}
+        </Shell>
+        <UnlockModal />
+      </CurrencyProvider>
     </UnlockProvider>
   )
 }

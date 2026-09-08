@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProvenanceBadge } from '@/components/ui/provenance-badge'
-import { formatNumber, formatCurrency } from '@/lib/utils'
+import { formatNumber } from '@/lib/utils'
+import { useCurrency } from '@/context/CurrencyContext'
 import { exportToCsv, exportToJson, generatePrintableHtmlReport, ReportData } from '@/lib/export'
 import { FileText, Download, Bell, ShieldAlert, AlertTriangle, X, Check, Calendar, Layers, SlidersHorizontal, Eye } from 'lucide-react'
 import { useUnlock } from '@/context/UnlockContext'
@@ -71,17 +72,17 @@ const projectChartConfig: ChartConfig = {
 }
 
 const timelineChartConfig: ChartConfig = {
-  cacheRead: {
-    label: "Cache Read",
-    color: "hsl(var(--chart-1))",
-  },
   input: {
     label: "Input Tokens",
-    color: "hsl(var(--chart-3))",
+    color: "hsl(var(--chart-2))",
   },
   output: {
     label: "Output Tokens",
     color: "hsl(var(--chart-4))",
+  },
+  cacheRead: {
+    label: "Cache Read",
+    color: "hsl(var(--chart-1))",
   },
 }
 
@@ -106,6 +107,7 @@ const donutChartConfig: ChartConfig = {
 
 export function Dashboard({ onSelectProject }: DashboardProps) {
   const { isUnlocked, checkAndRecordExport, openUnlockModal } = useUnlock()
+  const { formatCurrency } = useCurrency()
   const [metrics, setMetrics] = useState<any>(null)
   const [budgetStatus, setBudgetStatus] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -122,25 +124,26 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
     return d.toISOString().slice(0, 10)
   })
   const [customEndDate, setCustomEndDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [customDateError, setCustomDateError] = useState<string | null>(null)
   const [reportBrandingCompany, setReportBrandingCompany] = useState(() => localStorage.getItem('token_tracker_company') || '')
   const [reportBrandingAuthor, setReportBrandingAuthor] = useState(() => localStorage.getItem('token_tracker_author') || '')
   const [reportData, setReportData] = useState<ReportData | null>(null)
   const [isLoadingReport, setIsLoadingReport] = useState(false)
 
   const loadData = async () => {
-    if (window.electronAPI) {
-      try {
+    try {
+      if (window.electronAPI) {
         const [metricsRes, budgetRes] = await Promise.all([
           window.electronAPI.getDashboardMetrics(),
           window.electronAPI.getBudgetStatus(),
         ])
         setMetrics(metricsRes)
         setBudgetStatus(budgetRes)
-      } catch (err) {
-        console.error('Failed to load dashboard metrics:', err)
-      } finally {
-        setIsLoading(false)
       }
+    } catch (err) {
+      console.error('Failed to load dashboard metrics:', err)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -157,8 +160,21 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
     } else if (period === '30d') {
       start = now - 30 * 24 * 60 * 60 * 1000
     } else if (period === 'custom') {
-      start = new Date(customStartDate).getTime() || 0
-      end = new Date(customEndDate).getTime() + 24 * 60 * 60 * 1000 - 1
+      const parsedStart = new Date(customStartDate).getTime()
+      const parsedEnd = new Date(customEndDate).getTime()
+      if (isNaN(parsedStart) || isNaN(parsedEnd)) {
+        setCustomDateError('Invalid date selected. Please specify valid dates.')
+        setIsLoadingReport(false)
+        return
+      }
+      if (parsedStart > parsedEnd) {
+        setCustomDateError('Start date cannot be after end date.')
+        setIsLoadingReport(false)
+        return
+      }
+      setCustomDateError(null)
+      start = parsedStart
+      end = parsedEnd + 24 * 60 * 60 * 1000 - 1
     }
     try {
       const data = await window.electronAPI.getReportData({ startDate: start, endDate: end })
@@ -209,8 +225,9 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
   const topProjects = metrics?.projectTokens || []
   const dailyTrends = metrics?.dailyTrends || []
 
-  const cacheHitPercentage = totalTokensAllTime > 0
-    ? ((cacheReadTokens / (cacheReadTokens + (allTime.inputTokens || 1))) * 100).toFixed(1)
+  const cacheHitDenominator = cacheReadTokens + (allTime.inputTokens || 0)
+  const cacheHitPercentage = totalTokensAllTime > 0 && cacheHitDenominator > 0
+    ? ((cacheReadTokens / cacheHitDenominator) * 100).toFixed(1)
     : '0.0'
 
   // Donut category dataset
@@ -221,61 +238,51 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
     { category: "cacheCreation", tokens: cacheCreationTokens, fill: "hsl(var(--chart-5))" },
   ].filter(d => d.tokens > 0), [allTime, cacheReadTokens, cacheCreationTokens])
 
-  // Sparkline data generation based on daily trends
+  // Sparkline data generation based on real telemetry
   const sparklineToday = useMemo(() => {
-    const today = dailyTrends[dailyTrends.length - 1]?.total || metrics?.tokensToday || 12000
+    const hourly = metrics?.hourlyToday || []
+    if (hourly.length > 1) {
+      return hourly.map((h: any) => ({ step: `${h.hour}:00`, value: h.tokens }))
+    }
+    const today = metrics?.tokensToday || 0
     return [
-      { step: '1', value: Math.round(today * 0.15) },
-      { step: '2', value: Math.round(today * 0.35) },
-      { step: '3', value: Math.round(today * 0.25) },
-      { step: '4', value: Math.round(today * 0.65) },
-      { step: '5', value: Math.round(today * 0.85) },
-      { step: '6', value: today },
+      { step: '1', value: today },
+      { step: '2', value: today },
     ]
-  }, [dailyTrends, metrics])
+  }, [metrics])
 
   const sparklineWeek = useMemo(() => {
-    if (dailyTrends.length >= 7) {
+    if (dailyTrends.length >= 2) {
       return dailyTrends.slice(-7).map((d: any, idx: number) => ({ step: String(idx + 1), value: d.total }))
     }
-    const val = metrics?.tokensWeek || 50000
+    const val = metrics?.tokensWeek || 0
     return [
-      { step: '1', value: Math.round(val * 0.08) },
-      { step: '2', value: Math.round(val * 0.14) },
-      { step: '3', value: Math.round(val * 0.11) },
-      { step: '4', value: Math.round(val * 0.22) },
-      { step: '5', value: Math.round(val * 0.18) },
-      { step: '6', value: Math.round(val * 0.27) },
+      { step: '1', value: val },
+      { step: '2', value: val },
     ]
   }, [dailyTrends, metrics])
 
   const sparklineMonth = useMemo(() => {
-    if (dailyTrends.length > 0) {
+    if (dailyTrends.length >= 2) {
       return dailyTrends.slice(-14).map((d: any, idx: number) => ({ step: String(idx + 1), value: d.total }))
     }
-    const val = metrics?.tokensMonth || 200000
+    const val = metrics?.tokensMonth || 0
     return [
-      { step: '1', value: Math.round(val * 0.1) },
-      { step: '2', value: Math.round(val * 0.2) },
-      { step: '3', value: Math.round(val * 0.15) },
-      { step: '4', value: Math.round(val * 0.3) },
-      { step: '5', value: Math.round(val * 0.25) },
+      { step: '1', value: val },
+      { step: '2', value: val },
     ]
   }, [dailyTrends, metrics])
 
   const sparklineCache = useMemo(() => {
-    if (dailyTrends.length >= 6) {
+    if (dailyTrends.length >= 2) {
       return dailyTrends.slice(-6).map((d: any, idx: number) => ({ step: String(idx + 1), value: d.cacheRead }))
     }
+    const val = cacheReadTokens || 0
     return [
-      { step: '1', value: 1200 },
-      { step: '2', value: 4500 },
-      { step: '3', value: 3100 },
-      { step: '4', value: 8900 },
-      { step: '5', value: 12400 },
-      { step: '6', value: 18500 },
+      { step: '1', value: val },
+      { step: '2', value: val },
     ]
-  }, [dailyTrends])
+  }, [dailyTrends, cacheReadTokens])
 
   if (isLoading) {
     return (
@@ -621,7 +628,7 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
               Token Burn Timeline
             </CardTitle>
             <p className="text-xs text-[#888888] mt-0.5">
-              Daily cumulative token activity across input, output, and cache reads
+              Daily token activity across input, output, and cache reads
             </p>
           </div>
           <Badge variant="outline" className="border-[#262626] font-mono text-[11px] text-[#888888]">
@@ -634,17 +641,17 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
               <ChartContainer config={timelineChartConfig} className="h-64 w-full">
                 <AreaChart data={dailyTrends} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="fillCache" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-cacheRead)" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="var(--color-cacheRead)" stopOpacity={0.0} />
-                    </linearGradient>
                     <linearGradient id="fillInput" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-input)" stopOpacity={0.3} />
+                      <stop offset="5%" stopColor="var(--color-input)" stopOpacity={0.2} />
                       <stop offset="95%" stopColor="var(--color-input)" stopOpacity={0.0} />
                     </linearGradient>
                     <linearGradient id="fillOutput" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-output)" stopOpacity={0.3} />
+                      <stop offset="5%" stopColor="var(--color-output)" stopOpacity={0.25} />
                       <stop offset="95%" stopColor="var(--color-output)" stopOpacity={0.0} />
+                    </linearGradient>
+                    <linearGradient id="fillCache" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-cacheRead)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="var(--color-cacheRead)" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1f1f1f" />
@@ -668,27 +675,24 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
                   <ChartLegend content={<ChartLegendContent />} />
                   <Area
                     type="monotone"
-                    dataKey="cacheRead"
-                    stackId="1"
-                    stroke="var(--color-cacheRead)"
-                    fill="url(#fillCache)"
-                    strokeWidth={1.5}
-                  />
-                  <Area
-                    type="monotone"
                     dataKey="input"
-                    stackId="1"
                     stroke="var(--color-input)"
                     fill="url(#fillInput)"
-                    strokeWidth={1.5}
+                    strokeWidth={2}
                   />
                   <Area
                     type="monotone"
                     dataKey="output"
-                    stackId="1"
                     stroke="var(--color-output)"
                     fill="url(#fillOutput)"
-                    strokeWidth={1.5}
+                    strokeWidth={2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="cacheRead"
+                    stroke="var(--color-cacheRead)"
+                    fill="url(#fillCache)"
+                    strokeWidth={2}
                   />
                 </AreaChart>
               </ChartContainer>
@@ -969,6 +973,11 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
                     >
                       Apply
                     </Button>
+                  </div>
+                )}
+                {reportPeriod === 'custom' && customDateError && (
+                  <div className="mt-1 text-[11px] text-red-400 font-sans">
+                    ⚠ {customDateError}
                   </div>
                 )}
               </div>

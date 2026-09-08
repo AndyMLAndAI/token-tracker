@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ProvenanceBadge } from '@/components/ui/provenance-badge'
-import { formatNumber, formatCurrency, CURRENCY_MAP, getCurrentCurrency } from '@/lib/utils'
+import { formatNumber, CURRENCY_MAP } from '@/lib/utils'
+import { useCurrency } from '@/context/CurrencyContext'
 import {
   RefreshCw,
   Terminal,
@@ -29,7 +30,6 @@ import {
   Keyboard,
   Clock,
   Coins,
-  Eye,
   ExternalLink,
   ShieldCheck,
   Key,
@@ -67,14 +67,13 @@ export function Settings() {
 
   // 15 QoL Feature States
   const [soundAlertChime, setSoundAlertChime] = useState(() => localStorage.getItem('token_tracker_sound_chime') === 'true')
-  const [currency, setCurrency] = useState(() => getCurrentCurrency())
+  const { currency, setCurrency, formatCurrency } = useCurrency()
   const [idleDays, setIdleDays] = useState(() => localStorage.getItem('token_tracker_idle_days') || '30')
   const [cliInterval, setCliInterval] = useState(() => localStorage.getItem('token_tracker_cli_interval') || '2s')
   const [dataRetention, setDataRetention] = useState(() => localStorage.getItem('token_tracker_data_retention') || 'all')
   const [accentColor, setAccentColor] = useState(() => localStorage.getItem('token_tracker_accent_color') || '#10b981')
   const [reportCompany, setReportCompany] = useState(() => localStorage.getItem('token_tracker_company') || '')
   const [reportAuthor, setReportAuthor] = useState(() => localStorage.getItem('token_tracker_author') || '')
-  const [isMiniHudActive, setIsMiniHudActive] = useState(false)
   const [isPruning, setIsPruning] = useState(false)
   const [pruneResult, setPruneResult] = useState<string | null>(null)
 
@@ -170,8 +169,6 @@ export function Settings() {
       return
     }
     setCurrency(newCurrency)
-    localStorage.setItem('token_tracker_currency', newCurrency)
-    window.location.reload()
   }
 
   const handleAccentColorChange = (newColor: string, isCustom = false) => {
@@ -213,21 +210,41 @@ export function Settings() {
     localStorage.setItem('token_tracker_data_retention', retention)
   }
 
-  const handlePruneNow = () => {
+  const handlePruneNow = async () => {
     if (!isUnlocked) {
       openUnlockModal('Custom Data Retention Control')
       return
     }
-    setIsPruning(true)
-    setTimeout(() => {
-      setIsPruning(false)
-      setPruneResult('Retention cleanup completed. Sessions older than retention policy pruned.')
+    if (dataRetention === 'all') {
+      setPruneResult('Retention policy is currently set to "Keep All Records". Select a retention period (30, 90, or 180 days) to prune older turns.')
+      setTimeout(() => setPruneResult(null), 5000)
+      return
+    }
+    const days = parseInt(dataRetention, 10)
+    if (isNaN(days) || days <= 0) {
+      setPruneResult('Invalid retention duration selected.')
       setTimeout(() => setPruneResult(null), 4000)
-    }, 800)
-  }
+      return
+    }
 
-  const handleToggleMiniHud = () => {
-    setIsMiniHudActive(!isMiniHudActive)
+    setIsPruning(true)
+    try {
+      if (window.electronAPI?.pruneData) {
+        const res = await window.electronAPI.pruneData(days)
+        if (res.success) {
+          setPruneResult(`Retention cleanup completed: ${res.deletedTurns} turns older than ${days} days were deleted.`)
+        } else {
+          setPruneResult(`Pruning failed: ${res.error || 'Unknown error'}`)
+        }
+      } else {
+        setPruneResult('Pruning is only available in the Token Tracker desktop app.')
+      }
+    } catch (err: any) {
+      setPruneResult(`Pruning failed: ${err.message}`)
+    } finally {
+      setIsPruning(false)
+      setTimeout(() => setPruneResult(null), 5000)
+    }
   }
 
   const handleActivateSubmit = async (e: React.FormEvent) => {
@@ -557,32 +574,6 @@ export function Settings() {
                 </option>
               ))}
             </select>
-          </div>
-
-          {/* QoL 12: Compact Floating HUD */}
-          <div className="flex items-center justify-between pb-4 border-b border-[#1a1a1a]">
-            <div className="space-y-1 pr-4">
-              <div className="flex items-center gap-2">
-                <span className="text-white font-medium text-xs font-sans">Desktop Widget / Floating Mini HUD</span>
-                {!isUnlocked && <LockedBadge featureName="Desktop Widget / Floating HUD" />}
-              </div>
-              <div className="text-[#888888] text-[11px] font-sans">
-                Compact always-on-top HUD window showing today's live token volume and spend.
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleToggleMiniHud}
-              className={`h-7 text-xs px-2.5 border-[#262626] ${
-                isMiniHudActive && isUnlocked
-                  ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400'
-                  : 'bg-black text-[#cccccc] hover:text-white'
-              }`}
-            >
-              <Eye className="w-3.5 h-3.5 mr-1" />
-              <span>{isMiniHudActive && isUnlocked ? 'HUD Active' : 'Toggle HUD'}</span>
-            </Button>
           </div>
 
           {/* Custom Accent Color Picker */}

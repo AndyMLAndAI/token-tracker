@@ -4,7 +4,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ProvenanceBadge } from '@/components/ui/provenance-badge'
-import { formatNumber, formatCurrency, formatDate } from '@/lib/utils'
+import { formatNumber, formatDate } from '@/lib/utils'
+import { useCurrency } from '@/context/CurrencyContext'
 import { exportToCsv, exportToJson, copyMarkdownTable } from '@/lib/export'
 import { ArrowLeft, ArrowUpDown, Terminal, Download, Copy, Check, Tag, Bookmark, Edit2 } from 'lucide-react'
 import {
@@ -43,6 +44,7 @@ const turnLineConfig: ChartConfig = {
 
 export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
   const { isUnlocked, checkAndRecordExport, openUnlockModal } = useUnlock()
+  const { formatCurrency } = useCurrency()
   const [sessions, setSessions] = useState<any[]>([])
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [turns, setTurns] = useState<any[]>([])

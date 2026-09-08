@@ -8,6 +8,7 @@ interface AdUnitProps {
   height: number
   label?: string
   className?: string
+  compact?: boolean
 }
 
 export function AdUnit({
@@ -16,6 +17,7 @@ export function AdUnit({
   height,
   label = "Sponsored",
   className = "",
+  compact = false,
 }: AdUnitProps) {
   const [mounted, setMounted] = useState(false)
 
@@ -60,10 +62,16 @@ export function AdUnit({
 
   return (
     <div
-      className={`rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-sm p-4 shadow-xl shadow-black/20 ${className}`}
+      className={`rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-sm shadow-xl shadow-black/20 ${
+        compact ? "p-2 sm:p-2.5" : "p-3 sm:p-4"
+      } ${className}`}
     >
       {/* Ad Chrome Header */}
-      <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-zinc-800/60 text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
+      <div
+        className={`flex items-center justify-between border-b border-zinc-800/60 text-[10px] uppercase tracking-wider text-zinc-500 font-medium ${
+          compact ? "pb-1.5 mb-1.5" : "pb-2 mb-2"
+        }`}
+      >
         <div className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80 animate-pulse" />
           <span>{label}</span>
@@ -74,7 +82,7 @@ export function AdUnit({
       </div>
 
       {/* Ad Content Container with horizontal scroll safety for smaller viewports */}
-      <div className="w-full flex items-center justify-center overflow-x-auto py-1 scrollbar-none">
+      <div className="w-full flex items-center justify-center overflow-x-auto scrollbar-none">
         <div
           style={{ width: `${width}px`, height: `${height}px` }}
           className="shrink-0 flex items-center justify-center relative"

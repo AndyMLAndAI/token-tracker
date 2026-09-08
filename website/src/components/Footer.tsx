@@ -1,9 +1,15 @@
+"use client"
+
 import React from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { AppLogo } from "@/components/ui/AppLogo"
 import { ShieldCheck, Terminal, HardDrive } from "lucide-react"
 
 export function Footer() {
+  const pathname = usePathname()
+  if (pathname === "/adcontribution") return null
+
   return (
     <footer className="w-full border-t border-[#1f1f1f] bg-black text-muted-foreground py-10 mt-auto">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">

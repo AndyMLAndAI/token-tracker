@@ -17,6 +17,7 @@ import { ingestClaudeStatsCache } from '../ingestion/claude-code'
 import { IngestionEngine } from '../ingestion/watcher'
 import { proxyServer } from '../proxy/proxy-server'
 import { getAllBudgetStatuses, checkBudgetsAndNotify } from './budget-checker'
+import { verifyActivationCode } from '../utils/activation'
 
 function sanitizePath(rawPath: string): string {
   if (!rawPath) return '~/'
@@ -726,10 +727,20 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
 
   ipcMain.handle('openContributionPage', () => {
     shell.openExternal('https://gettokentracker.netlify.app/adcontribution')
-    // Trust-based unlock: immediately mark as unlocked locally
-    setContributionUnlocked(true)
-    mainWindow.webContents.send('unlock-status-changed', true)
-    return { success: true, unlocked: true }
+    return { success: true }
+  })
+
+  ipcMain.handle('activateWithCode', (_event, rawCode: string) => {
+    const result = verifyActivationCode(rawCode)
+    if (result.valid) {
+      setContributionUnlocked(true)
+      mainWindow.webContents.send('unlock-status-changed', true)
+      return { success: true }
+    } else if (result.reason === 'expired') {
+      return { success: false, error: 'Code expired — please generate a new one' }
+    } else {
+      return { success: false, error: 'Invalid code' }
+    }
   })
 
   // 14. Project Metadata & QoL Extras

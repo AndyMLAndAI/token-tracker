@@ -32,6 +32,8 @@ import {
   Eye,
   ExternalLink,
   ShieldCheck,
+  Key,
+  AlertCircle,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { AppLogo } from '@/components/ui/AppLogo'
@@ -39,7 +41,7 @@ import { useUnlock } from '@/context/UnlockContext'
 import { LockedBadge } from '@/components/ui/LockedBadge'
 
 export function Settings() {
-  const { isUnlocked, exportCount, openUnlockModal } = useUnlock()
+  const { isUnlocked, exportCount, openUnlockModal, supportAndUnlock, activateCode } = useUnlock()
   const [sources, setSources] = useState<any[]>([])
   const [isResyncing, setIsResyncing] = useState(false)
   const [lastSyncResult, setLastSyncResult] = useState<any>(null)
@@ -52,6 +54,12 @@ export function Settings() {
   const [isClearing, setIsClearing] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [clearStatusMessage, setClearStatusMessage] = useState<string | null>(null)
+
+  // Code-based activation state
+  const [unlockCodeInput, setUnlockCodeInput] = useState('')
+  const [isActivatingCode, setIsActivatingCode] = useState(false)
+  const [activationError, setActivationError] = useState<string | null>(null)
+  const [activationSuccess, setActivationSuccess] = useState<string | null>(null)
 
   // App preferences (Tray & Startup)
   const [minimizeToTray, setMinimizeToTray] = useState(true)
@@ -219,11 +227,34 @@ export function Settings() {
   }
 
   const handleToggleMiniHud = () => {
-    if (!isUnlocked) {
-      openUnlockModal('Desktop Widget & Floating HUD')
+    setIsMiniHudActive(!isMiniHudActive)
+  }
+
+  const handleActivateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!unlockCodeInput.trim()) {
+      setActivationError('Please enter an activation code')
       return
     }
-    setIsMiniHudActive(!isMiniHudActive)
+
+    setIsActivatingCode(true)
+    setActivationError(null)
+    setActivationSuccess(null)
+
+    try {
+      const result = await activateCode(unlockCodeInput.trim())
+      if (result.success) {
+        setActivationSuccess('Token Tracker Pro successfully activated!')
+        setUnlockCodeInput('')
+        setTimeout(() => setActivationSuccess(null), 5000)
+      } else {
+        setActivationError(result.error || 'Invalid code')
+      }
+    } catch (err: any) {
+      setActivationError(err.message || 'Invalid code')
+    } finally {
+      setIsActivatingCode(false)
+    }
   }
 
   const handleSaveBudget = async (e: React.FormEvent) => {
@@ -365,47 +396,92 @@ export function Settings() {
 
       {/* Contribution Unlock & Pro Status Card */}
       <Card className={`border ${isUnlocked ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
-        <CardContent className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-mono text-xs">
-          <div className="flex items-start gap-3">
-            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isUnlocked ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-amber-500/10 border border-amber-500/30 text-amber-400'}`}>
-              {isUnlocked ? <ShieldCheck className="w-5 h-5" /> : <Heart className="w-5 h-5 fill-amber-500/20" />}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-white font-sans">
-                  {isUnlocked ? 'Token Tracker Pro Unlocked' : 'Token Tracker Free Edition'}
-                </span>
-                <Badge
-                  variant="outline"
-                  className={isUnlocked ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400' : 'border-amber-500/40 bg-amber-500/10 text-amber-400'}
-                >
-                  {isUnlocked ? 'Permanent Pro Active' : `${exportCount} / 2 Free Exports Used`}
-                </Badge>
+        <CardContent className="p-5 font-mono text-xs space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isUnlocked ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-amber-500/10 border border-amber-500/30 text-amber-400'}`}>
+                {isUnlocked ? <ShieldCheck className="w-5 h-5" /> : <Heart className="w-5 h-5 fill-amber-500/20" />}
               </div>
-              <p className="text-xs text-[#888888] font-sans mt-0.5 max-w-xl">
-                {isUnlocked
-                  ? 'All 15 Pro & Quality-of-Life features, unlimited reports, and custom themes are permanently enabled for this machine.'
-                  : 'Unlock 15+ Pro features, unlimited CSV/JSON/HTML exports, custom date ranges, and per-project color styling by supporting Token Tracker.'}
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-white font-sans">
+                    {isUnlocked ? 'Token Tracker Pro Unlocked' : 'Token Tracker Free Edition'}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={isUnlocked ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400' : 'border-amber-500/40 bg-amber-500/10 text-amber-400'}
+                  >
+                    {isUnlocked ? 'Permanent Pro Active' : `${exportCount} / 2 Free Exports Used`}
+                  </Badge>
+                </div>
+                <p className="text-xs text-[#888888] font-sans mt-0.5 max-w-xl">
+                  {isUnlocked
+                    ? 'All 15 Pro & Quality-of-Life features, unlimited reports, and custom themes are permanently enabled for this machine.'
+                    : 'Unlock 15+ Pro features, unlimited CSV/JSON/HTML exports, custom date ranges, and per-project color styling with an activation code.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto justify-end">
+              {!isUnlocked ? (
+                <Button
+                  onClick={() => supportAndUnlock()}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs h-8 px-3.5 shadow-sm cursor-pointer"
+                >
+                  <Heart className="w-3.5 h-3.5 mr-1.5 fill-white/20" />
+                  <span>Get Activation Code</span>
+                  <ExternalLink className="w-3 h-3 ml-1.5" />
+                </Button>
+              ) : (
+                <span className="text-xs text-emerald-400 font-mono flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-md">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>All Features Unlocked</span>
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto justify-end">
-            {!isUnlocked ? (
-              <Button
-                onClick={() => openUnlockModal('Settings Pro Banner')}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs h-8 px-3.5 shadow-sm"
-              >
-                <Heart className="w-3.5 h-3.5 mr-1.5 fill-white/20" />
-                <span>Support Token Tracker</span>
-              </Button>
-            ) : (
-              <span className="text-xs text-emerald-400 font-mono flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-md">
-                <Check className="w-3.5 h-3.5" />
-                <span>All Features Unlocked</span>
-              </span>
-            )}
-          </div>
+          {/* Activation Code Input & Submit Area (shown when locked) */}
+          {!isUnlocked && (
+            <div className="pt-3 border-t border-border/40">
+              <form onSubmit={handleActivateSubmit} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="relative flex-1">
+                  <Key className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={unlockCodeInput}
+                    onChange={(e) => {
+                      setUnlockCodeInput(e.target.value)
+                      if (activationError) setActivationError(null)
+                    }}
+                    placeholder="Enter unlock code..."
+                    className="w-full bg-background border border-border rounded-md pl-9 pr-3 py-1.5 text-xs font-mono text-foreground placeholder:text-muted-foreground outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={isActivatingCode || !unlockCodeInput.trim()}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs h-8 px-4 shrink-0 shadow-sm cursor-pointer"
+                >
+                  {isActivatingCode ? 'Verifying...' : 'Activate'}
+                </Button>
+              </form>
+
+              {/* Status messages */}
+              {activationError && (
+                <div className="mt-2 text-xs text-destructive font-medium flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{activationError}</span>
+                </div>
+              )}
+              {activationSuccess && (
+                <div className="mt-2 text-xs text-emerald-400 font-medium flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>{activationSuccess}</span>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

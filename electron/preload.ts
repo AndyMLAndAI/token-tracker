@@ -33,7 +33,8 @@ export interface ElectronAPI {
   getUnlockStatus: () => Promise<{ unlocked: boolean; exportCount: number }>
   unlockFeatures: () => Promise<{ success: boolean; unlocked: boolean }>
   recordExportUse: () => Promise<{ allowed: boolean; count: number; unlocked: boolean }>
-  openContributionPage: () => Promise<{ success: boolean; unlocked: boolean }>
+  openContributionPage: () => Promise<{ success: boolean }>
+  activateWithCode: (code: string) => Promise<{ success: boolean; error?: string }>
   getProjectMetadata: () => Promise<Record<string, { nickname?: string; isPinned: boolean; customColor?: string }>>
   setProjectNickname: (args: { projectId: string; nickname: string }) => Promise<{ success: boolean }>
   togglePinProject: (projectId: string) => Promise<{ success: boolean; isPinned: boolean }>
@@ -94,6 +95,7 @@ const api: ElectronAPI = {
   unlockFeatures: () => ipcRenderer.invoke('unlockFeatures'),
   recordExportUse: () => ipcRenderer.invoke('recordExportUse'),
   openContributionPage: () => ipcRenderer.invoke('openContributionPage'),
+  activateWithCode: (code: string) => ipcRenderer.invoke('activateWithCode', code),
   getProjectMetadata: () => ipcRenderer.invoke('getProjectMetadata'),
   setProjectNickname: (args) => ipcRenderer.invoke('setProjectNickname', args),
   togglePinProject: (projectId) => ipcRenderer.invoke('togglePinProject', projectId),

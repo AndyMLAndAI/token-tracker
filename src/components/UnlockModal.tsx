@@ -1,11 +1,54 @@
-import React from 'react'
-import { Sparkles, Heart, ExternalLink, X, ShieldCheck } from 'lucide-react'
+import React, { useState } from 'react'
+import { Sparkles, Heart, ExternalLink, X, ShieldCheck, Key, Check, AlertCircle, Loader2 } from 'lucide-react'
 import { useUnlock } from '../context/UnlockContext'
 
 export const UnlockModal: React.FC = () => {
-  const { isModalOpen, closeUnlockModal, supportAndUnlock } = useUnlock()
+  const { isModalOpen, closeUnlockModal, supportAndUnlock, activateCode } = useUnlock()
+  const [pastedCode, setPastedCode] = useState<string>('')
+  const [isActivating, setIsActivating] = useState<boolean>(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [showCodeInput, setShowCodeInput] = useState<boolean>(false)
 
   if (!isModalOpen) return null
+
+  const handleSupportClick = async () => {
+    try {
+      await supportAndUnlock()
+      // Automatically open code input section so user can paste the code when they copy it from the browser
+      setShowCodeInput(true)
+    } catch (err) {
+      console.error('Failed to open supporter page:', err)
+    }
+  }
+
+  const handleActivate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!pastedCode.trim()) {
+      setErrorMsg('Please enter an activation code')
+      return
+    }
+
+    setIsActivating(true)
+    setErrorMsg(null)
+    setSuccessMsg(null)
+
+    try {
+      const result = await activateCode(pastedCode.trim())
+      if (result.success) {
+        setSuccessMsg('Token Tracker Pro activated!')
+        setTimeout(() => {
+          closeUnlockModal()
+        }, 1200)
+      } else {
+        setErrorMsg(result.error || 'Invalid code')
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Invalid code')
+    } finally {
+      setIsActivating(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -50,7 +93,7 @@ export const UnlockModal: React.FC = () => {
         </p>
 
         {/* Perks list preview */}
-        <div className="rounded-lg bg-muted/40 border border-border/60 p-3 mb-5 space-y-1.5 text-[11px] text-muted-foreground">
+        <div className="rounded-lg bg-muted/40 border border-border/60 p-3 mb-4 space-y-1.5 text-[11px] text-muted-foreground">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span>Unlimited CSV, JSON, and Markdown report exports</span>
@@ -69,6 +112,71 @@ export const UnlockModal: React.FC = () => {
           </div>
         </div>
 
+        {/* Code Activation Section */}
+        {showCodeInput ? (
+          <form onSubmit={handleActivate} className="mb-5 p-3 rounded-lg border border-border bg-muted/30 space-y-2.5 animate-in fade-in-50 duration-200">
+            <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
+              <span className="flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-amber-400" />
+                <span>Enter Activation Code</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => supportAndUnlock()}
+                className="text-[10px] text-emerald-400 hover:underline inline-flex items-center gap-1"
+              >
+                <span>Re-open page</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Paste code from browser..."
+                value={pastedCode}
+                onChange={(e) => {
+                  setPastedCode(e.target.value)
+                  if (errorMsg) setErrorMsg(null)
+                }}
+                className="flex-1 bg-background border border-border rounded-md px-2.5 py-1.5 text-xs font-mono text-foreground placeholder:text-muted-foreground outline-none focus:border-emerald-500"
+              />
+              <button
+                type="submit"
+                disabled={isActivating || !pastedCode.trim()}
+                className="px-3 py-1.5 text-xs font-semibold rounded-md bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white transition-colors cursor-pointer shrink-0"
+              >
+                {isActivating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Activate'}
+              </button>
+            </div>
+
+            {errorMsg && (
+              <div className="flex items-center gap-1.5 text-[11px] text-destructive font-medium">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            {successMsg && (
+              <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
+                <Check className="w-3.5 h-3.5 shrink-0" />
+                <span>{successMsg}</span>
+              </div>
+            )}
+          </form>
+        ) : (
+          <div className="mb-5 flex items-center justify-between text-[11px] text-muted-foreground px-1">
+            <span>Already have an activation code?</span>
+            <button
+              type="button"
+              onClick={() => setShowCodeInput(true)}
+              className="text-emerald-400 hover:underline font-medium cursor-pointer"
+            >
+              Enter code
+            </button>
+          </div>
+        )}
+
         {/* Buttons */}
         <div className="flex items-center justify-end gap-2.5">
           <button
@@ -80,7 +188,7 @@ export const UnlockModal: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={supportAndUnlock}
+            onClick={handleSupportClick}
             className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-md bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm hover:shadow transition-all cursor-pointer"
           >
             <span>Support Token Tracker</span>

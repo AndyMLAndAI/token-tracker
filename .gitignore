@@ -5,6 +5,7 @@ build/
 release/
 .next/
 out/
+!trailer/out/token-tracker-trailer.mp4
 
 installer/node_modules/
 installer/dist/

@@ -38,7 +38,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${sourceSerif.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="bg-parchment-canvas text-ink-primary antialiased selection:bg-[#e8e6df] selection:text-ink-primary min-h-screen flex flex-col justify-between">
+      <body className="bg-parchment-canvas text-ink-primary antialiased selection:bg-[#e8e6df] selection:text-ink-primary min-h-screen flex flex-col justify-between relative">
+        <div className="paper-grain-overlay" aria-hidden="true" />
         {children}
       </body>
     </html>

@@ -7,9 +7,15 @@ interface CopyButtonProps {
   textToCopy: string;
   className?: string;
   label?: string;
+  copiedLabel?: string;
 }
 
-export function CopyButton({ textToCopy, className = '', label }: CopyButtonProps) {
+export function CopyButton({
+  textToCopy,
+  className = '',
+  label = 'Copy',
+  copiedLabel = 'Copied',
+}: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async (e: React.MouseEvent) => {
@@ -19,7 +25,7 @@ export function CopyButton({ textToCopy, className = '', label }: CopyButtonProp
       setCopied(true);
       setTimeout(() => {
         setCopied(false);
-      }, 2000);
+      }, 1800);
     } catch (err) {
       console.error('Failed to copy text: ', err);
     }
@@ -30,24 +36,24 @@ export function CopyButton({ textToCopy, className = '', label }: CopyButtonProp
       <motion.button
         onClick={handleCopy}
         type="button"
-        aria-label={copied ? 'Copied to clipboard' : 'Copy command to clipboard'}
-        whileHover={{ scale: 1.03 }}
+        aria-label={copied ? 'Copied to clipboard' : `Copy ${textToCopy}`}
+        whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.94 }}
         transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-        className={`relative inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm text-xs font-mono font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-primary focus-visible:ring-offset-1 focus-visible:ring-offset-parchment-canvas ${
+        className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-mono font-medium transition-all duration-200 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-primary focus-visible:ring-offset-1 focus-visible:ring-offset-parchment-canvas ${
           copied
-            ? 'bg-parchment-canvas text-ink-primary border border-parchment-border shadow-soft'
-            : 'bg-parchment-card hover:bg-parchment-canvas text-ink-secondary hover:text-ink-primary border border-parchment-border hover:border-parchment-border shadow-soft'
+            ? 'bg-clay/10 text-clay border border-clay/40 shadow-soft'
+            : 'bg-parchment-card hover:bg-parchment-canvas text-ink-secondary hover:text-ink-primary border border-parchment-border hover:border-ink-secondary/30 shadow-soft'
         } ${className}`}
       >
-        <div className="relative w-3.5 h-3.5 flex items-center justify-center">
+        <div className="relative w-3.5 h-3.5 flex items-center justify-center overflow-hidden">
           <AnimatePresence mode="wait" initial={false}>
             {copied ? (
               <motion.svg
-                key="check"
-                initial={{ opacity: 0, scale: 0.6, rotate: -15 }}
+                key="check-icon"
+                initial={{ opacity: 0, scale: 0.4, rotate: 45 }}
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                exit={{ opacity: 0, scale: 0.6, rotate: 15 }}
+                exit={{ opacity: 0, scale: 0.4, rotate: -30 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 22 }}
                 className="w-3.5 h-3.5 text-clay"
                 viewBox="0 0 24 24"
@@ -66,11 +72,11 @@ export function CopyButton({ textToCopy, className = '', label }: CopyButtonProp
               </motion.svg>
             ) : (
               <motion.svg
-                key="clipboard"
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.6 }}
-                transition={{ duration: 0.15 }}
+                key="clipboard-icon"
+                initial={{ opacity: 0, scale: 0.6, rotate: -30 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                exit={{ opacity: 0, scale: 0.4, rotate: -45 }}
+                transition={{ duration: 0.16 }}
                 className="w-3.5 h-3.5 text-ink-muted group-hover:text-ink-primary transition-colors"
                 viewBox="0 0 24 24"
                 fill="none"
@@ -86,21 +92,23 @@ export function CopyButton({ textToCopy, className = '', label }: CopyButtonProp
           </AnimatePresence>
         </div>
 
-        {label && <span className="font-sans text-[11px] select-none">{label}</span>}
+        <span className="font-sans text-[11px] tracking-tight">
+          {copied ? copiedLabel : label}
+        </span>
       </motion.button>
 
-      {/* Floating micro-pill toast / tooltip */}
+      {/* Floating micro-pill toast with Clay pulse dot */}
       <AnimatePresence>
         {copied && (
           <motion.div
-            initial={{ opacity: 0, y: 6, scale: 0.9 }}
-            animate={{ opacity: 1, y: -26, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-            className="pointer-events-none absolute left-1/2 -translate-x-1/2 z-30 whitespace-nowrap px-2 py-0.5 rounded-sm bg-ink-primary text-parchment-canvas text-[10px] font-sans font-medium tracking-tight shadow-soft flex items-center gap-1"
+            initial={{ opacity: 0, y: 4, scale: 0.9 }}
+            animate={{ opacity: 1, y: -30, scale: 1 }}
+            exit={{ opacity: 0, y: -24, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 26 }}
+            className="pointer-events-none absolute left-1/2 -translate-x-1/2 z-50 whitespace-nowrap px-2.5 py-1 rounded-sm bg-ink-primary text-parchment-canvas text-[10px] font-sans font-medium tracking-tight shadow-soft-lg flex items-center gap-1.5"
           >
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-clay" />
-            Copied
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-clay animate-pulse" />
+            <span>Copied to clipboard</span>
           </motion.div>
         )}
       </AnimatePresence>

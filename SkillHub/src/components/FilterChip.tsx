@@ -13,37 +13,49 @@ interface FilterChipProps {
 export function FilterChip({ label, count, isActive, onClick }: FilterChipProps) {
   return (
     <motion.button
-      layout
       type="button"
       onClick={onClick}
-      whileHover={{ scale: 1.04 }}
-      whileTap={{ scale: 0.95 }}
-      transition={{ type: 'spring', stiffness: 450, damping: 26 }}
-      className={`group relative inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-primary focus-visible:ring-offset-2 focus-visible:ring-offset-parchment-canvas select-none ${
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.96 }}
+      transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+      className={`group relative inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium transition-colors duration-150 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-primary rounded-sm ${
         isActive
-          ? 'bg-parchment-card text-ink-primary border border-ink-primary shadow-soft'
-          : 'bg-parchment-card-muted/70 hover:bg-parchment-card text-ink-muted hover:text-ink-secondary border border-parchment-border/60 hover:border-parchment-border shadow-none'
+          ? 'text-ink-primary font-semibold'
+          : 'text-ink-muted hover:text-ink-primary font-normal'
       }`}
     >
-      {/* Sparing Clay accent mark for active indicator */}
+      {/* Sparing Clay dot marker when active */}
       {isActive && (
         <motion.span
-          layoutId="active-indicator"
+          layoutId="active-clay-dot"
           className="w-1.5 h-1.5 rounded-full bg-clay inline-block shrink-0"
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
         />
       )}
-      
-      <span className="select-none tracking-tight">{label}</span>
+
+      <span className="tracking-tight">{label}</span>
 
       {typeof count === 'number' && (
         <span
-          className={`text-[10px] font-mono ml-0.5 transition-colors ${
-            isActive ? 'text-ink-muted' : 'text-ink-subtle'
+          className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full transition-colors ${
+            isActive
+              ? 'bg-parchment-border/80 text-ink-primary'
+              : 'bg-parchment-card-muted text-ink-subtle group-hover:text-ink-muted'
           }`}
         >
           {count}
         </span>
+      )}
+
+      {/* Editorial Ink Pen Stroke Underline drawing from left on select */}
+      {isActive && (
+        <motion.span
+          layoutId="active-ink-underline"
+          className="absolute bottom-0 left-0 right-0 h-[2px] bg-ink-primary origin-left rounded-full"
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        />
       )}
     </motion.button>
   );

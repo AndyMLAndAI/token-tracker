@@ -1,0 +1,110 @@
+[
+  {
+    "id": "impeccable",
+    "name": "Impeccable Design Director",
+    "description": "Transforms timid frontend code into award-winning, production-grade craft. Includes overdrive, audit, polish, and anti-pattern detectors.",
+    "category": "Agent Skills",
+    "installCommand": "npx impeccable init",
+    "tags": ["Design System", "Craft", "Visual Polish", "Framer Motion"],
+    "sourceUrl": "https://github.com/claude-skills/impeccable"
+  },
+  {
+    "id": "chrome-devtools",
+    "name": "Chrome DevTools MCP",
+    "description": "Deep browser automation, network request interception, console log introspection, and live DOM tree exploration for AI coding agents.",
+    "category": "Agent Skills",
+    "installCommand": "npx -y @modelcontextprotocol/server-puppeteer",
+    "tags": ["MCP", "Browser", "DevTools", "Automation"],
+    "sourceUrl": "https://github.com/modelcontextprotocol/servers"
+  },
+  {
+    "id": "debug-optimize-lcp",
+    "name": "LCP Performance Profiler",
+    "description": "Pinpoints and resolves Largest Contentful Paint bottlenecks, sub-optimal font flashes (FOUT/FOIT), and unoptimized media delivery paths.",
+    "category": "Performance",
+    "installCommand": "npx web-vitals-cli audit --metric=LCP",
+    "tags": ["Core Web Vitals", "LCP", "Performance", "Optimization"],
+    "sourceUrl": "https://web.dev/explore/fast"
+  },
+  {
+    "id": "a11y-debugging",
+    "name": "Accessibility (a11y) Auditor",
+    "description": "Audits keyboard navigation traps, ARIA landmark hierarchies, focus ring visibility, color contrast math, and tap target geometry.",
+    "category": "Testing & QA",
+    "installCommand": "npx axe-core-cli --include-rules wcag21aa",
+    "tags": ["A11y", "WCAG", "Screen Reader", "Compliance"],
+    "sourceUrl": "https://www.w3.org/WAI/WCAG21/quickref/"
+  },
+  {
+    "id": "memory-leak-debugging",
+    "name": "V8 Heap & Memory Hunter",
+    "description": "Diagnoses JavaScript heap retention trees, detached DOM nodes, uncleaned event listeners, and runaway closures in long-lived sessions.",
+    "category": "Performance",
+    "installCommand": "node --inspect --expose-gc ./scripts/memlab-hunt.mjs",
+    "tags": ["Memory Leaks", "V8", "Profiling", "Node.js"],
+    "sourceUrl": "https://facebook.github.io/memlab/"
+  },
+  {
+    "id": "framer-motion-recipes",
+    "name": "Editorial Motion Kit",
+    "description": "Curated physics springs, staggered text reveals, shared layout morphs, and micro-interaction hooks tuned for editorial publications.",
+    "category": "Design & UI",
+    "installCommand": "npm install framer-motion clsx tailwind-merge",
+    "tags": ["Animation", "Spring Physics", "Micro-interactions", "React"],
+    "sourceUrl": "https://www.framer.com/motion/"
+  },
+  {
+    "id": "tailwind-parchment-tokens",
+    "name": "Parchment Token Preset",
+    "description": "Claude-inspired warm parchment palette, ink hierarchy, restrained radius scale, and featherweight soft shadows without AI-slop.",
+    "category": "Design & UI",
+    "installCommand": "npx tailwindcss-preset-parchment add",
+    "tags": ["Tailwind", "Design Tokens", "Parchment", "Typography"],
+    "sourceUrl": "https://github.com/token-tracker/parchment"
+  },
+  {
+    "id": "playwright-e2e-suite",
+    "name": "Headless E2E Synthetics",
+    "description": "Resilient cross-browser regression test runner with auto-waiting assertions, visual diffing, and zero-flakiness network stubbing.",
+    "category": "Testing & QA",
+    "installCommand": "npm init playwright@latest -- --yes",
+    "tags": ["Playwright", "E2E", "Automated Testing", "CI/CD"],
+    "sourceUrl": "https://playwright.dev/"
+  },
+  {
+    "id": "git-hygiene",
+    "name": "Semantic Git Sculptor",
+    "description": "Standardizes conventional commits, squashes messy agent experiment checkpoints, and enforces clean branch topologies prior to PR.",
+    "category": "Workflow",
+    "installCommand": "npx commitlint --from=HEAD~1 --verbose",
+    "tags": ["Git", "Workflow", "Conventional Commits", "CLI"],
+    "sourceUrl": "https://commitlint.js.org/"
+  },
+  {
+    "id": "bundle-phobia-cli",
+    "name": "Dependency Weight Inspector",
+    "description": "Instantly queries npm package sizes, tree-shaking efficacy, side-effect flags, and gzip overhead before you run npm install.",
+    "category": "Performance",
+    "installCommand": "npx bundle-phobia-cli inspect",
+    "tags": ["Bundle Size", "Tree Shaking", "npm", "Performance"],
+    "sourceUrl": "https://bundlephobia.com/"
+  },
+  {
+    "id": "vercel-preview-guard",
+    "name": "Vercel Edge Deploy Guard",
+    "description": "Monitors deployment preview states, checks edge function payload limits, and inspects build logs via official Vercel CLI.",
+    "category": "DevOps",
+    "installCommand": "npx vercel --prod --confirm",
+    "tags": ["Vercel", "Edge", "Deployment", "Next.js"],
+    "sourceUrl": "https://vercel.com/docs/cli"
+  },
+  {
+    "id": "ts-reset",
+    "name": "TypeScript Total Reset",
+    "description": "Ruleset for stricter TypeScript built-ins: fixes JSON.parse, fetch, array.filter(Boolean), and Object.entries type safety.",
+    "category": "Workflow",
+    "installCommand": "npm install -D @total-typescript/ts-reset",
+    "tags": ["TypeScript", "Type Safety", "Developer Experience"],
+    "sourceUrl": "https://github.com/total-typescript/ts-reset"
+  }
+]

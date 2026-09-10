@@ -174,8 +174,20 @@ function createWindow() {
 
       try {
         // 1. Dashboard View
-        console.log('[Capture] 1/4: Waiting for Dashboard data to render...')
-        await sleep(3000)
+        console.log('[Capture] 1/4: Waiting for Dashboard real data to render...')
+        for (let attempt = 0; attempt < 40; attempt++) {
+          const ready = await mainWindow!.webContents.executeJavaScript(`
+            Boolean(document.querySelector('.recharts-area-chart')) &&
+            document.querySelectorAll('.recharts-area').length > 0 &&
+            !document.body.innerText.includes('Loading...')
+          `).catch(() => false)
+          if (ready) {
+            console.log('[Capture] Dashboard data and charts ready!')
+            break
+          }
+          await sleep(500)
+        }
+        await sleep(1500)
         let img = await safeCapture()
         const dashPath = path.join(screenshotsDir, '01_dashboard.png')
         fs.writeFileSync(dashPath, img.toPNG())
@@ -184,7 +196,14 @@ function createWindow() {
         // 2. Projects View
         console.log('[Capture] 2/4: Navigating to Projects view...')
         mainWindow!.webContents.send('navigate-page', { page: 'projects' })
-        await sleep(1500)
+        for (let attempt = 0; attempt < 30; attempt++) {
+          const ready = await mainWindow!.webContents.executeJavaScript(`
+            !document.body.innerText.includes('Loading projects...')
+          `).catch(() => false)
+          if (ready) break
+          await sleep(400)
+        }
+        await sleep(1000)
         img = await safeCapture()
         const projPath = path.join(screenshotsDir, '02_projects.png')
         fs.writeFileSync(projPath, img.toPNG())
@@ -196,7 +215,7 @@ function createWindow() {
         const projId = spartanProj ? spartanProj.id : undefined
         console.log(`[Capture] 3/4: Navigating to Session Detail for project "${spartanProj?.name}" (${projId})...`)
         mainWindow!.webContents.send('navigate-page', { page: 'session-detail', projectId: projId })
-        await sleep(2000)
+        await sleep(2500)
         img = await safeCapture()
         const sessionPath = path.join(screenshotsDir, '03_session_detail.png')
         fs.writeFileSync(sessionPath, img.toPNG())
@@ -205,7 +224,7 @@ function createWindow() {
         // 4. Settings View
         console.log('[Capture] 4/4: Navigating to Settings view...')
         mainWindow!.webContents.send('navigate-page', { page: 'settings' })
-        await sleep(1500)
+        await sleep(2000)
         img = await safeCapture()
         const settingsPath = path.join(screenshotsDir, '04_settings.png')
         fs.writeFileSync(settingsPath, img.toPNG())

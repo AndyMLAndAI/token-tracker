@@ -286,9 +286,10 @@ function createWindow() {
         const testTurnId = 'test-tray-turn-' + Date.now()
         const testSessionId = 'test-tray-session-' + Date.now()
         const testProjId = 'test-tray-proj-' + Date.now()
-        db.prepare('INSERT OR IGNORE INTO projects (id, path, name, tool_source, created_at) VALUES (?, ?, ?, ?, ?)').run(
+        const testProjPath = 'C:/test/tray-proj-' + Date.now()
+        db.prepare('INSERT INTO projects (id, path, name, tool_source, created_at) VALUES (?, ?, ?, ?, ?)').run(
           testProjId,
-          'C:/test/tray-proj',
+          testProjPath,
           'TrayTestProject',
           'claude_code',
           Date.now()

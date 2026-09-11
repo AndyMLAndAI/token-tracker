@@ -134,6 +134,9 @@ export function Shell({
             <span className="text-[11px] font-medium text-[#777777] font-mono tracking-wider uppercase">
               Navigation
             </span>
+            <span className="text-[10px] font-mono border border-[#262626] rounded px-1.5 py-0.5 text-[#888888] bg-[#0c0c0c]">
+              v1.8
+            </span>
           </div>
 
           {/* Navigation Items */}

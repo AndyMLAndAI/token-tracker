@@ -46,7 +46,7 @@ export async function run(args = process.argv.slice(2)) {
   }
 
   if (cleanArgs.includes('-v') || cleanArgs.includes('--version') || command === 'version') {
-    console.log('1.7.0')
+    console.log('1.8.0')
     process.exit(0)
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "@andymlandai/token-tracker-cli",
-  "version": "1.0.0",
+  "version": "1.8.0",
   "description": "Ink (React-based) CLI companion for Token Tracker - Exact local token and cost tracking",
   "publishConfig": {
     "access": "public"

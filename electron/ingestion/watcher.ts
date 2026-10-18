@@ -6,6 +6,7 @@ import { ingestClaudeJsonlFile, ingestAllClaudeProjects } from './claude-code'
 import { backfillAllExtensionTasks, ingestExtensionTaskHistory, ingestUiMessagesFile } from './cline-roo'
 import { ingestAllAntigravity, ingestAntigravityConversationDb, parseAgyhubSummaries } from './antigravity'
 import { runSyntheticEstimatorScan, ingestContinueSessions } from './synthetic-estimator'
+import { ingestAllAiderData } from './aider'
 import { getPlatformCodeGlobalStoragePath } from './path-resolver'
 
 export interface IngestionEngineOptions {
@@ -28,6 +29,7 @@ export class IngestionEngine {
     rooTasks: number
     antigravityTurns: number
     syntheticTurns: number
+    aiderTurns: number
   }> {
     console.log('[Ingestion] Running initial sync across all detected sources...')
 
@@ -51,12 +53,17 @@ export class IngestionEngine {
     const synthResult = runSyntheticEstimatorScan()
     console.log(`[Ingestion] Synthetic Estimator: ${synthResult.totalTurnsIngested} estimated turns ingested.`)
 
+    // 6. Aider analytics/history stored in its local data directory
+    const aiderResult = ingestAllAiderData()
+    console.log(`[Ingestion] Aider: ${aiderResult.totalFiles} files, ${aiderResult.totalTurns} turns ingested.`)
+
     return {
       claudeTurns: claudeResult.totalTurns,
       clineTasks: clineResult.tasksIngested,
       rooTasks: rooResult.tasksIngested,
       antigravityTurns: agyResult.totalTurns,
       syntheticTurns: synthResult.totalTurnsIngested,
+      aiderTurns: aiderResult.totalTurns,
     }
   }
 
@@ -93,6 +100,11 @@ export class IngestionEngine {
       watchPaths.push(continueSessions)
     }
 
+    const aiderHome = path.join(os.homedir(), '.aider')
+    if (fs.existsSync(aiderHome)) {
+      watchPaths.push(aiderHome)
+    }
+
     if (watchPaths.length === 0) {
       console.log('[Ingestion] No source directories found to watch.')
       return
@@ -100,7 +112,6 @@ export class IngestionEngine {
 
     console.log('[Ingestion] Starting chokidar watcher on:', watchPaths)
     this.watcher = chokidar.watch(watchPaths, {
-      ignored: /(^|[\/\\])\../, // ignore dotfiles
       persistent: true,
       ignoreInitial: true,
       depth: 4,
@@ -151,6 +162,9 @@ export class IngestionEngine {
     } else if (filePath.endsWith('.json') && filePath.includes('.continue')) {
       const res = ingestContinueSessions()
       if (res.turnsIngested > 0) changed = true
+    } else if (filePath.includes(`${path.sep}.aider${path.sep}`) && (filePath.endsWith('.jsonl') || filePath.endsWith('.md'))) {
+      const res = ingestAllAiderData()
+      if (res.totalTurns > 0) changed = true
     }
 
     if (changed && this.onDataChangedCallback) {

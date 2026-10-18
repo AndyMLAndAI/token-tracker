@@ -73,8 +73,8 @@ function getOrCreateProject(projectPath: string): string {
 // Helper to get or insert session
 function getOrCreateSession(sessionId: string, projectId: string, model: string, startTime: number): string {
   const db = getDb()
-  const selectStmt = db.prepare('SELECT id FROM sessions WHERE external_id = ?')
-  const existing = selectStmt.get(sessionId) as { id: string } | undefined
+  const selectStmt = db.prepare("SELECT id FROM sessions WHERE external_id = ? AND tool_source = 'claude_code' AND project_id = ?")
+  const existing = selectStmt.get(sessionId, projectId) as { id: string } | undefined
   if (existing) {
     return existing.id
   }
@@ -116,7 +116,14 @@ export function ingestClaudeJsonlFile(filePath: string): { turnsAdded: number } 
   fs.closeSync(fd)
 
   const content = buffer.toString('utf8')
-  const lines = content.split('\n')
+  // A writer may have flushed only part of its final JSON line.  Leave that
+  // suffix unread so it is retried after the next write instead of losing it.
+  const lastNewline = content.lastIndexOf('\n')
+  if (lastNewline < 0) {
+    return { turnsAdded: 0 }
+  }
+  const completeContent = content.slice(0, lastNewline + 1)
+  const lines = completeContent.split('\n')
 
   let turnsAdded = 0
   const seenMessageIds = new Set<string>()
@@ -178,11 +185,15 @@ export function ingestClaudeJsonlFile(filePath: string): { turnsAdded: number } 
 
             const turnId = crypto.randomUUID()
             const insertTurn = db.prepare(`
-              INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'exact')
+              INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance, source_record_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'exact', ?)
+              ON CONFLICT(source_record_id) DO NOTHING
             `)
-            insertTurn.run(turnId, currentSessionDbId, inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens, costUsd, timestamp)
-            turnsAdded++
+            const result = insertTurn.run(
+              turnId, currentSessionDbId, inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens,
+              costUsd, timestamp, `claude_code:${sessionExternalId}:${messageId}`
+            ) as { changes: number }
+            if (result.changes > 0) turnsAdded++
           }
         }
       } catch {
@@ -198,7 +209,7 @@ export function ingestClaudeJsonlFile(filePath: string): { turnsAdded: number } 
         byte_offset = excluded.byte_offset,
         last_modified = excluded.last_modified
     `)
-    upsertOffset.run(filePath, stat.size, stat.mtimeMs)
+    upsertOffset.run(filePath, startOffset + Buffer.byteLength(completeContent), stat.mtimeMs)
 
     db.exec('COMMIT')
   } catch (txErr) {

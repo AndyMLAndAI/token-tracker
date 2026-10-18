@@ -162,11 +162,15 @@ export function calculateTurnCost(
   inputTokens: number,
   outputTokens: number,
   cacheReadTokens: number = 0,
-  cacheCreationTokens: number = 0
+  cacheCreationTokens: number = 0,
+  cacheReadIncludedInInput: boolean = false
 ): number {
   const pricing = getModelPricing(modelName)
 
-  const inputCost = (inputTokens * pricing.inputPerMillion) / 1_000_000
+  const billableInputTokens = cacheReadIncludedInInput
+    ? Math.max(0, inputTokens - cacheReadTokens)
+    : inputTokens
+  const inputCost = (billableInputTokens * pricing.inputPerMillion) / 1_000_000
   const outputCost = (outputTokens * pricing.outputPerMillion) / 1_000_000
   const cacheReadCost = (cacheReadTokens * pricing.cacheReadPerMillion) / 1_000_000
   const cacheCreationCost = (cacheCreationTokens * pricing.cacheCreationPerMillion) / 1_000_000

@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import crypto from 'node:crypto'
 import { getDb } from '../db/database'
 import { calculateTurnCost } from './pricing'
@@ -35,6 +36,11 @@ function parseTokenNumber(str: string): number {
   return parseInt(clean, 10) || 0
 }
 
+function sourceRecordId(prefix: string, sessionId: string, index: number, value: string): string {
+  const digest = crypto.createHash('sha256').update(value).digest('hex').slice(0, 16)
+  return `${prefix}:${sessionId}:${index}:${digest}`
+}
+
 /**
  * Ingests an Aider chat history markdown file (.aider.chat.history.md).
  */
@@ -47,8 +53,8 @@ export function ingestAiderMarkdownHistory(filePath: string): { turnsIngested: n
   const sessionId = `aider-${path.basename(projectDir)}`
 
   // Ensure session exists
-  const selectSession = db.prepare('SELECT id FROM sessions WHERE external_id = ?')
-  const existingSession = selectSession.get(sessionId) as { id: string } | undefined
+  const selectSession = db.prepare("SELECT id FROM sessions WHERE external_id = ? AND tool_source = 'aider' AND project_id = ?")
+  const existingSession = selectSession.get(sessionId, projectId) as { id: string } | undefined
 
   let sessionDbId = existingSession?.id
   if (!sessionDbId) {
@@ -84,17 +90,15 @@ export function ingestAiderMarkdownHistory(filePath: string): { turnsIngested: n
 
       const fileStat = fs.statSync(filePath)
       const timestamp = Math.floor(fileStat.mtimeMs) + turnIndex
-
-      const checkTurn = db.prepare('SELECT id FROM turns WHERE session_id = ? AND timestamp = ?')
-      const existing = checkTurn.get(sessionDbId, timestamp)
-
-      if (!existing) {
-        const turnId = crypto.randomUUID()
-        const insertTurn = db.prepare(`
-          INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance)
-          VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'exact')
-        `)
-        insertTurn.run(turnId, sessionDbId, inputTokens, outputTokens, costUsd, timestamp)
+      const turnId = crypto.randomUUID()
+      const insertTurn = db.prepare(`
+        INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance, source_record_id)
+        VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'exact', ?)
+        ON CONFLICT(source_record_id) DO NOTHING
+      `)
+      const result = insertTurn.run(turnId, sessionDbId, inputTokens, outputTokens, costUsd, timestamp,
+        sourceRecordId('aider-history', sessionId, turnIndex, line)) as { changes: number }
+      if (result.changes > 0) {
         turnsIngested++
       }
     }
@@ -124,8 +128,8 @@ export function ingestAiderAnalyticsJsonl(filePath: string): { turnsIngested: nu
       const model = data.model || 'claude-3-5-sonnet'
 
       const sessionId = `aider-${path.basename(projectPath)}`
-      const selectSession = db.prepare('SELECT id FROM sessions WHERE external_id = ?')
-      const existingSession = selectSession.get(sessionId) as { id: string } | undefined
+      const selectSession = db.prepare("SELECT id FROM sessions WHERE external_id = ? AND tool_source = 'aider' AND project_id = ?")
+      const existingSession = selectSession.get(sessionId, projectId) as { id: string } | undefined
 
       let sessionDbId = existingSession?.id
       if (!sessionDbId) {
@@ -142,16 +146,16 @@ export function ingestAiderAnalyticsJsonl(filePath: string): { turnsIngested: nu
       const costUsd = Number(data.cost || calculateTurnCost(model, inputTokens, outputTokens))
       const timestamp = data.timestamp ? new Date(data.timestamp).getTime() : Date.now()
 
-      const checkTurn = db.prepare('SELECT id FROM turns WHERE session_id = ? AND timestamp = ?')
-      const existing = checkTurn.get(sessionDbId, timestamp)
-
-      if (!existing) {
-        const turnId = crypto.randomUUID()
-        const insertTurn = db.prepare(`
-          INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance)
-          VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'exact')
-        `)
-        insertTurn.run(turnId, sessionDbId, inputTokens, outputTokens, costUsd, timestamp)
+      const turnId = crypto.randomUUID()
+      const sourceId = data.id || data.uuid || data.request_id || line
+      const insertTurn = db.prepare(`
+        INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance, source_record_id)
+        VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'exact', ?)
+        ON CONFLICT(source_record_id) DO NOTHING
+      `)
+      const result = insertTurn.run(turnId, sessionDbId, inputTokens, outputTokens, costUsd, timestamp,
+        sourceRecordId('aider-analytics', sessionId, 0, String(sourceId))) as { changes: number }
+      if (result.changes > 0) {
         turnsIngested++
       }
     } catch {
@@ -160,4 +164,30 @@ export function ingestAiderAnalyticsJsonl(filePath: string): { turnsIngested: nu
   }
 
   return { turnsIngested }
+}
+
+/** Ingest supported Aider records stored below ~/.aider without scanning user projects. */
+export function ingestAllAiderData(): { totalFiles: number; totalTurns: number } {
+  const aiderHome = path.join(os.homedir(), '.aider')
+  if (!fs.existsSync(aiderHome)) return { totalFiles: 0, totalTurns: 0 }
+
+  let totalFiles = 0
+  let totalTurns = 0
+  const stack = [aiderHome]
+  while (stack.length > 0) {
+    const dir = stack.pop()!
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        stack.push(fullPath)
+      } else if (entry.isFile() && entry.name.endsWith('.jsonl')) {
+        totalFiles++
+        totalTurns += ingestAiderAnalyticsJsonl(fullPath).turnsIngested
+      } else if (entry.isFile() && entry.name === '.aider.chat.history.md') {
+        totalFiles++
+        totalTurns += ingestAiderMarkdownHistory(fullPath).turnsIngested
+      }
+    }
+  }
+  return { totalFiles, totalTurns }
 }

@@ -135,7 +135,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
     // Daily trends for area chart and sparklines
     const dailyStmt = db.prepare(`
       SELECT 
-        strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch') as day,
+        strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime') as day,
         COALESCE(SUM(input_tokens), 0) as input_tokens,
         COALESCE(SUM(output_tokens), 0) as output_tokens,
         COALESCE(SUM(cache_read_tokens), 0) as cache_read_tokens,
@@ -494,6 +494,15 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
     notifyOs?: boolean
   }) => {
     try {
+      const threshold = Number(budgetData.threshold)
+      const validPeriod = ['daily', 'weekly', 'monthly'].includes(budgetData.period)
+      const validMetric = ['cost', 'tokens'].includes(budgetData.metric)
+      if (!validPeriod || !validMetric || !Number.isFinite(threshold) || threshold <= 0) {
+        return { success: false, error: 'Budget period, metric, and positive finite threshold are required' }
+      }
+      if (budgetData.projectId !== undefined && budgetData.projectId !== null && typeof budgetData.projectId !== 'string') {
+        return { success: false, error: 'Invalid project id' }
+      }
       const db = getDb()
       const id = budgetData.id || crypto.randomUUID()
       const now = Date.now()
@@ -513,7 +522,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
         budgetData.projectId || null,
         budgetData.period,
         budgetData.metric,
-        Number(budgetData.threshold),
+        threshold,
         budgetData.notifyOs !== false ? 1 : 0,
         now
       )

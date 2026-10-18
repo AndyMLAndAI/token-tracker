@@ -17,6 +17,11 @@ function getTokenizer() {
   return cl100kEncoder
 }
 
+function stableRecordId(source: string, sessionId: string, index: number, input: string, output: string): string {
+  const digest = crypto.createHash('sha256').update(`${input}\u0000${output}`).digest('hex').slice(0, 16)
+  return `${source}:${sessionId}:${index}:${digest}`
+}
+
 export function countEstimatedTokens(text: string): number {
   if (!text || typeof text !== 'string') return 0
   try {
@@ -71,8 +76,8 @@ export function ingestContinueSessions(): { sessionsIngested: number; turnsInges
       const projectId = getOrCreateProject(projectPath, 'continue')
 
       // Session
-      const selectSession = db.prepare('SELECT id FROM sessions WHERE external_id = ?')
-      const existingSession = selectSession.get(sessionId) as { id: string } | undefined
+      const selectSession = db.prepare("SELECT id FROM sessions WHERE external_id = ? AND tool_source = 'continue' AND project_id = ?")
+      const existingSession = selectSession.get(sessionId, projectId) as { id: string } | undefined
 
       let sessionDbId = existingSession?.id
       if (!sessionDbId) {
@@ -105,16 +110,14 @@ export function ingestContinueSessions(): { sessionsIngested: number; turnsInges
           const cost = calculateTurnCost(modelName, inTok, outTok)
 
           const timestamp = Math.floor(fs.statSync(fullPath).mtimeMs) + turnIdx
-          const checkTurn = db.prepare('SELECT id FROM turns WHERE session_id = ? AND timestamp = ?')
-          if (!checkTurn.get(sessionDbId, timestamp)) {
-            const turnId = crypto.randomUUID()
-            const insertTurn = db.prepare(`
-              INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance)
-              VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'estimated')
-            `)
-            insertTurn.run(turnId, sessionDbId, inTok, outTok, cost, timestamp)
-            turnsIngested++
-          }
+          const insertTurn = db.prepare(`
+            INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance, source_record_id)
+            VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'estimated', ?)
+            ON CONFLICT(source_record_id) DO NOTHING
+          `)
+          const result = insertTurn.run(crypto.randomUUID(), sessionDbId, inTok, outTok, cost, timestamp,
+            stableRecordId('continue', sessionId, turnIdx, pendingPrompt, replyText)) as { changes: number }
+          if (result.changes > 0) turnsIngested++
 
           pendingPrompt = ''
         }
@@ -185,8 +188,8 @@ export function ingestCursorSessions(): { databasesScanned: number; turnsIngeste
           const conversations = parsed.allComposers || parsed.tabs || []
           for (const conv of conversations) {
             const externalId = conv.composerId || conv.tabId || `cursor-${ws.slice(0, 8)}`
-            const selectSession = db.prepare('SELECT id FROM sessions WHERE external_id = ?')
-            let sessionDbId = (selectSession.get(externalId) as any)?.id
+            const selectSession = db.prepare("SELECT id FROM sessions WHERE external_id = ? AND tool_source = 'cursor' AND project_id = ?")
+            let sessionDbId = (selectSession.get(externalId, projectId) as any)?.id
 
             if (!sessionDbId) {
               sessionDbId = crypto.randomUUID()
@@ -211,16 +214,14 @@ export function ingestCursorSessions(): { databasesScanned: number; turnsIngeste
                 const cost = calculateTurnCost(conv.model || 'claude-3-5-sonnet', inTok, outTok)
 
                 const timestamp = (conv.createdAt || Date.now()) + turnIdx
-                const checkTurn = db.prepare('SELECT id FROM turns WHERE session_id = ? AND timestamp = ?')
-                if (!checkTurn.get(sessionDbId, timestamp)) {
-                  const turnId = crypto.randomUUID()
-                  const insertTurn = db.prepare(`
-                    INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance)
-                    VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'estimated')
-                  `)
-                  insertTurn.run(turnId, sessionDbId, inTok, outTok, cost, timestamp)
-                  turnsIngested++
-                }
+                const insertTurn = db.prepare(`
+                  INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance, source_record_id)
+                  VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'estimated', ?)
+                  ON CONFLICT(source_record_id) DO NOTHING
+                `)
+                const result = insertTurn.run(crypto.randomUUID(), sessionDbId, inTok, outTok, cost, timestamp,
+                  stableRecordId('cursor', externalId, turnIdx, userText, asstText)) as { changes: number }
+                if (result.changes > 0) turnsIngested++
               }
             }
           }
@@ -294,8 +295,8 @@ export function ingestWindsurfSessions(): { databasesScanned: number; turnsInges
           const steps = parsed.messages || parsed.steps || []
           if (steps.length > 1) {
             const externalId = `windsurf-${ws.slice(0, 8)}`
-            const selectSession = db.prepare('SELECT id FROM sessions WHERE external_id = ?')
-            let sessionDbId = (selectSession.get(externalId) as any)?.id
+            const selectSession = db.prepare("SELECT id FROM sessions WHERE external_id = ? AND tool_source = 'windsurf' AND project_id = ?")
+            let sessionDbId = (selectSession.get(externalId, projectId) as any)?.id
 
             if (!sessionDbId) {
               sessionDbId = crypto.randomUUID()
@@ -316,17 +317,16 @@ export function ingestWindsurfSessions(): { databasesScanned: number; turnsInges
                 const outTok = countEstimatedTokens(a.content || a.text || '')
                 const cost = calculateTurnCost('claude-3-5-sonnet', inTok, outTok)
                 const timestamp = Date.now() - (steps.length - turnIdx) * 60000
-
-                const checkTurn = db.prepare('SELECT id FROM turns WHERE session_id = ? AND timestamp = ?')
-                if (!checkTurn.get(sessionDbId, timestamp)) {
-                  const turnId = crypto.randomUUID()
-                  const insertTurn = db.prepare(`
-                    INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance)
-                    VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'estimated')
-                  `)
-                  insertTurn.run(turnId, sessionDbId, inTok, outTok, cost, timestamp)
-                  turnsIngested++
-                }
+                const insertTurn = db.prepare(`
+                  INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance, source_record_id)
+                  VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'estimated', ?)
+                  ON CONFLICT(source_record_id) DO NOTHING
+                `)
+                const input = u.content || u.text || ''
+                const output = a.content || a.text || ''
+                const result = insertTurn.run(crypto.randomUUID(), sessionDbId, inTok, outTok, cost, timestamp,
+                  stableRecordId('windsurf', externalId, turnIdx, input, output)) as { changes: number }
+                if (result.changes > 0) turnsIngested++
               }
             }
           }

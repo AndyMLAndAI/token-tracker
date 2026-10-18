@@ -66,8 +66,8 @@ export function ingestExtensionTaskHistory(toolSource: 'cline' | 'roo_code'): { 
     const projectId = getOrCreateProject(cwd, toolSource)
 
     // Check if session already exists
-    const selectSession = db.prepare('SELECT id FROM sessions WHERE external_id = ?')
-    const existingSession = selectSession.get(task.id) as { id: string } | undefined
+    const selectSession = db.prepare('SELECT id FROM sessions WHERE external_id = ? AND tool_source = ? AND project_id = ?')
+    const existingSession = selectSession.get(task.id, toolSource, projectId) as { id: string } | undefined
 
     let sessionId = existingSession?.id
     if (!sessionId) {
@@ -87,15 +87,14 @@ export function ingestExtensionTaskHistory(toolSource: 'cline' | 'roo_code'): { 
     }
 
     // Check if turn already exists for this task
-    const selectTurn = db.prepare('SELECT id FROM turns WHERE session_id = ?')
-    const existingTurn = selectTurn.get(sessionId)
-    if (!existingTurn && ((task.tokensIn || 0) > 0 || (task.tokensOut || 0) > 0)) {
+    if (((task.tokensIn || 0) > 0 || (task.tokensOut || 0) > 0)) {
       const turnId = crypto.randomUUID()
       const insertTurn = db.prepare(`
-        INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'exact')
+        INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance, source_record_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'exact', ?)
+        ON CONFLICT(source_record_id) DO NOTHING
       `)
-      insertTurn.run(
+      const result = insertTurn.run(
         turnId,
         sessionId,
         task.tokensIn || 0,
@@ -103,9 +102,10 @@ export function ingestExtensionTaskHistory(toolSource: 'cline' | 'roo_code'): { 
         task.cacheReads || 0,
         task.cacheWrites || 0,
         task.totalCost || 0.0,
-        task.ts || Date.now()
-      )
-      tasksIngested++
+        task.ts || Date.now(),
+        `${toolSource}:task:${task.id}:summary`
+      ) as { changes: number }
+      if (result.changes > 0) tasksIngested++
     }
   }
 
@@ -120,14 +120,14 @@ export function ingestUiMessagesFile(uiMessagesPath: string, toolSource: 'cline'
   }
 
   const taskId = path.basename(path.dirname(uiMessagesPath))
-  const selectSession = db.prepare('SELECT id FROM sessions WHERE external_id = ?')
-  const sessionRow = selectSession.get(taskId) as { id: string } | undefined
+  const selectSession = db.prepare('SELECT id FROM sessions WHERE external_id = ? AND tool_source = ?')
+  const sessionRow = selectSession.get(taskId, toolSource) as { id: string } | undefined
   if (!sessionRow) {
     // If task was not in taskHistory yet, ingest the task first
     ingestExtensionTaskHistory(toolSource)
   }
 
-  const sessionNow = selectSession.get(taskId) as { id: string } | undefined
+  const sessionNow = selectSession.get(taskId, toolSource) as { id: string } | undefined
   if (!sessionNow) return { turnsAdded: 0 }
 
   let messages: any[] = []
@@ -140,32 +140,27 @@ export function ingestUiMessagesFile(uiMessagesPath: string, toolSource: 'cline'
   let turnsAdded = 0
   db.exec('BEGIN TRANSACTION')
   try {
+    // Task history is an aggregate fallback. Detailed ui_messages records
+    // supersede it, so keeping both would double-count the task.
+    db.prepare('DELETE FROM turns WHERE session_id = ? AND source_record_id = ?')
+      .run(sessionNow.id, `${toolSource}:task:${taskId}:summary`)
     for (const msg of messages) {
       if (msg.type === 'say' && msg.say === 'api_req_started' && msg.text) {
         try {
           const stats = JSON.parse(msg.text)
           if (stats.tokensIn !== undefined || stats.tokensOut !== undefined) {
-            // Check if turn already recorded with this exact timestamp
-            const checkTurn = db.prepare('SELECT id FROM turns WHERE session_id = ? AND timestamp = ?')
-            const hasTurn = checkTurn.get(sessionNow.id, msg.ts)
-            if (!hasTurn) {
-              const turnId = crypto.randomUUID()
-              const insertTurn = db.prepare(`
-                INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'exact')
-              `)
-              insertTurn.run(
-                turnId,
-                sessionNow.id,
-                stats.tokensIn || 0,
-                stats.tokensOut || 0,
-                stats.cacheReads || 0,
-                stats.cacheWrites || 0,
-                stats.cost || 0.0,
-                msg.ts || Date.now()
-              )
-              turnsAdded++
-            }
+            const turnId = crypto.randomUUID()
+            const insertTurn = db.prepare(`
+              INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance, source_record_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'exact', ?)
+              ON CONFLICT(source_record_id) DO NOTHING
+            `)
+            const result = insertTurn.run(
+              turnId, sessionNow.id, stats.tokensIn || 0, stats.tokensOut || 0,
+              stats.cacheReads || 0, stats.cacheWrites || 0, stats.cost || 0.0, msg.ts || Date.now(),
+              `${toolSource}:task:${taskId}:message:${msg.ts || crypto.createHash('sha256').update(msg.text).digest('hex')}`
+            ) as { changes: number }
+            if (result.changes > 0) turnsAdded++
           }
         } catch {
           // text was not JSON

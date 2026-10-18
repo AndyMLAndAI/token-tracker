@@ -208,8 +208,8 @@ export function ingestAntigravityConversationDb(
     const projectId = getOrCreateProject(projectPath)
 
     // Get or create session
-    const selectSession = db.prepare('SELECT id FROM sessions WHERE external_id = ?')
-    const existingSession = selectSession.get(conversationId) as { id: string } | undefined
+    const selectSession = db.prepare("SELECT id FROM sessions WHERE external_id = ? AND tool_source = 'antigravity' AND project_id = ?")
+    const existingSession = selectSession.get(conversationId, projectId) as { id: string } | undefined
 
     let sessionId = existingSession?.id
     if (!sessionId) {
@@ -224,10 +224,10 @@ export function ingestAntigravityConversationDb(
     const rows = convDb.prepare('SELECT idx, data FROM gen_metadata ORDER BY idx ASC').all() as Array<{ idx: number; data: Buffer }>
     let turnsIngested = 0
 
-    const checkTurnStmt = db.prepare('SELECT id FROM turns WHERE session_id = ? AND timestamp = ?')
     const insertTurnStmt = db.prepare(`
-      INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance)
-      VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'exact')
+      INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance, source_record_id)
+      VALUES (?, ?, ?, ?, 0, 0, ?, ?, 'exact', ?)
+      ON CONFLICT(source_record_id) DO NOTHING
     `)
 
     db.exec('BEGIN TRANSACTION')
@@ -239,13 +239,12 @@ export function ingestAntigravityConversationDb(
           const fileStat = fs.statSync(dbFilePath)
           const stepTimestamp = Math.floor(fileStat.mtimeMs) + row.idx
 
-          const existing = checkTurnStmt.get(sessionId, stepTimestamp)
-          if (!existing) {
-            const cost = calculateTurnCost(parsed.modelName, parsed.inputTokens, parsed.outputTokens)
-            const turnId = crypto.randomUUID()
-            insertTurnStmt.run(turnId, sessionId, parsed.inputTokens, parsed.outputTokens, cost, stepTimestamp)
-            turnsIngested++
-          }
+          const cost = calculateTurnCost(parsed.modelName, parsed.inputTokens, parsed.outputTokens)
+          const sourceRecordId = `antigravity:${conversationId}:${row.idx}`
+          const result = insertTurnStmt.run(
+            crypto.randomUUID(), sessionId, parsed.inputTokens, parsed.outputTokens, cost, stepTimestamp, sourceRecordId
+          ) as { changes: number }
+          if (result.changes > 0) turnsIngested++
         }
       }
       db.exec('COMMIT')

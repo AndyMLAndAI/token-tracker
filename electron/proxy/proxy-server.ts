@@ -235,9 +235,10 @@ class LocalLoopbackProxy {
         }
 
         // Insert or get session
-        const sessionId = `proxy-session-${new Date().toISOString().slice(0, 10)}`
-        const selSess = db.prepare('SELECT id FROM sessions WHERE external_id = ?')
-        let sessId = (selSess.get(sessionId) as any)?.id
+        const projectKey = crypto.createHash('sha256').update(projectPath).digest('hex').slice(0, 16)
+        const sessionId = `proxy-session-${projectKey}-${new Date().toISOString().slice(0, 10)}`
+        const selSess = db.prepare("SELECT id FROM sessions WHERE external_id = ? AND tool_source = 'proxy' AND project_id = ?")
+        let sessId = (selSess.get(sessionId, projId) as any)?.id
         if (!sessId) {
           sessId = crypto.randomUUID()
           db.prepare('INSERT INTO sessions (id, project_id, tool_source, model, start_time, external_id, provenance) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
@@ -251,7 +252,9 @@ class LocalLoopbackProxy {
           )
         }
 
-        const cost = calculateTurnCost(modelName, inTok, outTok, cacheRead, cacheCreation)
+        // OpenAI reports cached tokens within prompt_tokens; Anthropic reports
+        // cache usage separately from input_tokens.
+        const cost = calculateTurnCost(modelName, inTok, outTok, cacheRead, cacheCreation, !isAnthropic)
         const turnId = crypto.randomUUID()
         db.prepare('INSERT INTO turns (id, session_id, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, timestamp, provenance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
           turnId,

@@ -56,6 +56,7 @@ export function initDatabase(customPath?: string): DatabaseSync {
       cost_usd REAL NOT NULL DEFAULT 0.0,
       timestamp INTEGER NOT NULL,
       provenance TEXT NOT NULL DEFAULT 'exact',
+      source_record_id TEXT,
       FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
     );
 
@@ -122,11 +123,19 @@ export function initDatabase(customPath?: string): DatabaseSync {
     if (!turnCols.some((c) => c.name === 'provenance')) {
       db.exec("ALTER TABLE turns ADD COLUMN provenance TEXT NOT NULL DEFAULT 'exact';")
     }
+    if (!turnCols.some((c) => c.name === 'source_record_id')) {
+      db.exec('ALTER TABLE turns ADD COLUMN source_record_id TEXT;')
+    }
 
     // Create provenance indexes only after columns are guaranteed to exist
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_sessions_provenance ON sessions(provenance);
       CREATE INDEX IF NOT EXISTS idx_turns_provenance ON turns(provenance);
+      CREATE INDEX IF NOT EXISTS idx_turns_session_timestamp ON turns(session_id, timestamp);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_turns_source_record_id
+        ON turns(source_record_id) WHERE source_record_id IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_sessions_source_external_id
+        ON sessions(tool_source, external_id);
     `)
   } catch (migErr) {
     console.warn('[Database] Migration notice:', migErr)

@@ -20,6 +20,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { useUnlock } from '@/context/UnlockContext'
 import { LockedBadge } from '@/components/ui/LockedBadge'
 import { ContextWindowDiagnostics } from '@/components/ContextWindowDiagnostics'
+import { GitIntelligenceLedger } from '@/components/GitIntelligenceLedger'
 
 interface SessionDetailProps {
   projectId: string
@@ -575,6 +576,9 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
           </Card>
         </div>
       </div>
+
+      {/* Git Intelligence & Cost-per-Commit ROI */}
+      <GitIntelligenceLedger projectId={projectId} projectName={selectedSession?.externalId} />
     </div>
   )
 }

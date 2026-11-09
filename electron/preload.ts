@@ -41,6 +41,8 @@ export interface ElectronAPI {
   togglePinProject: (projectId: string) => Promise<{ success: boolean; isPinned: boolean }>
   setProjectColor: (args: { projectId: string; color: string }) => Promise<{ success: boolean }>
   saveSessionNote: (args: { sessionId: string; note: string }) => Promise<{ success: boolean }>
+  getProjectGitIntelligence: (projectId: string) => Promise<any>
+  generatePrMarkdownSummary: (args: any) => Promise<string>
   onUnlockStatusChanged: (callback: (unlocked: boolean) => void) => () => void
 }
 
@@ -103,6 +105,8 @@ const api: ElectronAPI = {
   togglePinProject: (projectId) => ipcRenderer.invoke('togglePinProject', projectId),
   setProjectColor: (args) => ipcRenderer.invoke('setProjectColor', args),
   saveSessionNote: (args) => ipcRenderer.invoke('saveSessionNote', args),
+  getProjectGitIntelligence: (projectId: string) => ipcRenderer.invoke('getProjectGitIntelligence', projectId),
+  generatePrMarkdownSummary: (args: any) => ipcRenderer.invoke('generatePrMarkdownSummary', args),
   onUnlockStatusChanged: (callback: (unlocked: boolean) => void) => {
     const handler = (_event: any, unlocked: boolean) => callback(unlocked)
     ipcRenderer.on('unlock-status-changed', handler)

@@ -18,6 +18,7 @@ import { IngestionEngine } from '../ingestion/watcher'
 import { proxyServer } from '../proxy/proxy-server'
 import { getAllBudgetStatuses, checkBudgetsAndNotify } from './budget-checker'
 import { verifyActivationCode } from '../utils/activation'
+import { getProjectGitIntelligence, generatePrMarkdownSummary } from '../git/git-correlator'
 
 function sanitizePath(rawPath: string): string {
   if (!rawPath) return '~/'
@@ -855,5 +856,25 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
     const db = getDb()
     db.prepare('UPDATE sessions SET notes = ? WHERE id = ?').run(note, sessionId)
     return { success: true }
+  })
+
+  ipcMain.handle('getProjectGitIntelligence', (_event, projectId: string) => {
+    const db = getDb()
+    const proj = db.prepare('SELECT id, path FROM projects WHERE id = ?').get(projectId) as any
+    if (!proj) {
+      return {
+        isGitRepo: false,
+        currentBranch: 'none',
+        branches: [],
+        commits: [],
+        totalAttributedSpend: 0,
+        totalAttributedTokens: 0,
+      }
+    }
+    return getProjectGitIntelligence(proj.path, proj.id, db)
+  })
+
+  ipcMain.handle('generatePrMarkdownSummary', (_event, { branchName, commits, totalTokens, totalCost }: any) => {
+    return generatePrMarkdownSummary(branchName, commits, totalTokens, totalCost)
   })
 }

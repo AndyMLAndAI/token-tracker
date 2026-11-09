@@ -19,6 +19,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { useUnlock } from '@/context/UnlockContext'
 import { LockedBadge } from '@/components/ui/LockedBadge'
+import { ContextWindowDiagnostics } from '@/components/ContextWindowDiagnostics'
 
 interface SessionDetailProps {
   projectId: string
@@ -512,6 +513,14 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
                       </ChartContainer>
                     </div>
                   )}
+
+                  {/* Context Window & Payload Bloat Diagnostics */}
+                  <div className="pt-2">
+                    <ContextWindowDiagnostics
+                      turns={turns}
+                      modelName={selectedSession?.model}
+                    />
+                  </div>
 
                   {/* Turns Table */}
                   <div className="max-h-[440px] overflow-y-auto">

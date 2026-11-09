@@ -132,8 +132,9 @@ export function initDatabase(customPath?: string): DatabaseSync {
       CREATE INDEX IF NOT EXISTS idx_sessions_provenance ON sessions(provenance);
       CREATE INDEX IF NOT EXISTS idx_turns_provenance ON turns(provenance);
       CREATE INDEX IF NOT EXISTS idx_turns_session_timestamp ON turns(session_id, timestamp);
+      DROP INDEX IF EXISTS idx_turns_source_record_id;
       CREATE UNIQUE INDEX IF NOT EXISTS idx_turns_source_record_id
-        ON turns(source_record_id) WHERE source_record_id IS NOT NULL;
+        ON turns(source_record_id);
       CREATE INDEX IF NOT EXISTS idx_sessions_source_external_id
         ON sessions(tool_source, external_id);
     `)

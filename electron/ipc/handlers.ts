@@ -1,4 +1,4 @@
-import { app, ipcMain, BrowserWindow, shell } from 'electron'
+import { app, ipcMain, BrowserWindow, shell, dialog, Notification } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -876,5 +876,121 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
 
   ipcMain.handle('generatePrMarkdownSummary', (_event, { branchName, commits, totalTokens, totalCost }: any) => {
     return generatePrMarkdownSummary(branchName, commits, totalTokens, totalCost)
+  })
+
+  ipcMain.handle('triggerCircuitBreakerAlert', (_event, { reason, costUsd }: any) => {
+    try {
+      if (Notification.isSupported()) {
+        new Notification({
+          title: '⚠️ Circuit Breaker Tripped',
+          body: `${reason || 'Runaway AI turn loop detected'} (Cost: $${Number(costUsd || 0).toFixed(2)})`,
+          urgency: 'critical',
+        }).show()
+      }
+      return { success: true }
+    } catch (err: any) {
+      console.error('Failed to show circuit breaker notification:', err)
+      return { success: false, error: err?.message }
+    }
+  })
+
+  ipcMain.handle('exportSignedAuditBundle', (_event, sessionId: string) => {
+    const db = getDb()
+    const session = db.prepare(`
+      SELECT s.*, p.name as project_name, p.path as project_path
+      FROM sessions s
+      JOIN projects p ON s.project_id = p.id
+      WHERE s.id = ?
+    `).get(sessionId) as any
+
+    if (!session) {
+      return { success: false, error: 'Session not found' }
+    }
+
+    const turns = db.prepare(`
+      SELECT id, timestamp, input_tokens, output_tokens, cache_read_tokens, cost_usd, provenance
+      FROM turns
+      WHERE session_id = ?
+      ORDER BY timestamp ASC
+    `).all(sessionId) as any[]
+
+    let prevHash = '0000000000000000000000000000000000000000000000000000000000000000'
+    const signedTurns = turns.map((t, idx) => {
+      const turnPayload = `${idx}|${t.id}|${t.timestamp}|${t.input_tokens}|${t.output_tokens}|${t.cache_read_tokens}|${t.cost_usd}|${prevHash}`
+      const turnHash = crypto.createHash('sha256').update(turnPayload).digest('hex')
+      prevHash = turnHash
+      return {
+        turnIndex: idx + 1,
+        id: t.id,
+        timestamp: t.timestamp,
+        inputTokens: t.input_tokens,
+        outputTokens: t.output_tokens,
+        cacheReadTokens: t.cache_read_tokens,
+        costUsd: t.cost_usd,
+        provenance: t.provenance,
+        turnHash,
+      }
+    })
+
+    const sessionHeader = `${session.id}|${session.project_id}|${session.model || 'unknown'}|${session.total_tokens}|${session.cost_usd}|${session.created_at}`
+    const bundlePayload = `${sessionHeader}|${prevHash}`
+    const rootSignature = crypto.createHash('sha256').update(bundlePayload).digest('hex')
+
+    const bundle = {
+      specVersion: 'token-tracker-audit-v1',
+      generatedAt: new Date().toISOString(),
+      generator: {
+        name: 'Token Tracker Enterprise Telemetry',
+        appVersion: '1.9.2',
+        platform: process.platform,
+      },
+      session: {
+        id: session.id,
+        externalId: session.external_id,
+        projectId: session.project_id,
+        projectName: session.project_name,
+        model: session.model,
+        source: session.source,
+        totalTokens: session.total_tokens,
+        costUsd: session.cost_usd,
+        createdAt: session.created_at,
+        turnCount: signedTurns.length,
+        notes: session.notes,
+      },
+      turns: signedTurns,
+      cryptographicProof: {
+        algorithm: 'SHA-256',
+        chainRootHash: prevHash,
+        rootSignatureHex: rootSignature,
+        tamperEvident: true,
+      },
+    }
+
+    return {
+      success: true,
+      bundle,
+      sha256: rootSignature,
+    }
+  })
+
+  ipcMain.handle('saveAuditBundleToFile', async (_event, { defaultFilename, content }: any) => {
+    try {
+      const result = await dialog.showSaveDialog(mainWindow, {
+        defaultPath: defaultFilename,
+        filters: [
+          { name: 'JSON Audit Bundle (*.json)', extensions: ['json'] },
+          { name: 'All Files (*.*)', extensions: ['*'] },
+        ],
+      })
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, canceled: true }
+      }
+
+      fs.writeFileSync(result.filePath, content, 'utf8')
+      return { success: true, filePath: result.filePath }
+    } catch (err: any) {
+      return { success: false, error: err?.message }
+    }
   })
 }

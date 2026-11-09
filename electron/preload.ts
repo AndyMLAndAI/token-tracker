@@ -43,6 +43,9 @@ export interface ElectronAPI {
   saveSessionNote: (args: { sessionId: string; note: string }) => Promise<{ success: boolean }>
   getProjectGitIntelligence: (projectId: string) => Promise<any>
   generatePrMarkdownSummary: (args: any) => Promise<string>
+  triggerCircuitBreakerAlert: (args: { reason: string; costUsd: number; sessionId?: string }) => Promise<{ success: boolean; error?: string }>
+  exportSignedAuditBundle: (sessionId: string) => Promise<{ success: boolean; bundle?: any; sha256?: string; error?: string }>
+  saveAuditBundleToFile: (args: { defaultFilename: string; content: string }) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>
   onUnlockStatusChanged: (callback: (unlocked: boolean) => void) => () => void
 }
 
@@ -107,6 +110,9 @@ const api: ElectronAPI = {
   saveSessionNote: (args) => ipcRenderer.invoke('saveSessionNote', args),
   getProjectGitIntelligence: (projectId: string) => ipcRenderer.invoke('getProjectGitIntelligence', projectId),
   generatePrMarkdownSummary: (args: any) => ipcRenderer.invoke('generatePrMarkdownSummary', args),
+  triggerCircuitBreakerAlert: (args) => ipcRenderer.invoke('triggerCircuitBreakerAlert', args),
+  exportSignedAuditBundle: (sessionId) => ipcRenderer.invoke('exportSignedAuditBundle', sessionId),
+  saveAuditBundleToFile: (args) => ipcRenderer.invoke('saveAuditBundleToFile', args),
   onUnlockStatusChanged: (callback: (unlocked: boolean) => void) => {
     const handler = (_event: any, unlocked: boolean) => callback(unlocked)
     ipcRenderer.on('unlock-status-changed', handler)

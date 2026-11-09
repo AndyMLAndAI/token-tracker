@@ -156,3 +156,36 @@ export function playSuccess(volume: number = 0.07): void {
     })
   } catch {}
 }
+
+/**
+ * Procedural emergency siren for circuit breaker trips and runaway loops
+ */
+export function playAlarm(volume: number = 0.12): void {
+  if (!isAudioEnabled()) return
+  const ctx = getAudioContext()
+  if (!ctx) return
+
+  try {
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    const now = ctx.currentTime
+
+    osc.type = 'sawtooth'
+    // 3 alternating siren pulses
+    for (let i = 0; i < 3; i++) {
+      const start = now + (i * 0.14)
+      osc.frequency.setValueAtTime(880, start)
+      osc.frequency.exponentialRampToValueAtTime(520, start + 0.12)
+    }
+
+    gain.gain.setValueAtTime(volume, now)
+    gain.gain.setValueAtTime(volume, now + 0.38)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+
+    osc.start(now)
+    osc.stop(now + 0.5)
+  } catch {}
+}

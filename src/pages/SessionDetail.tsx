@@ -7,7 +7,7 @@ import { ProvenanceBadge } from '@/components/ui/provenance-badge'
 import { formatNumber, formatDate } from '@/lib/utils'
 import { useCurrency } from '@/context/CurrencyContext'
 import { exportToCsv, exportToJson, copyMarkdownTable } from '@/lib/export'
-import { ArrowLeft, ArrowUpDown, Terminal, Download, Copy, Check, Tag, Bookmark, Edit2 } from 'lucide-react'
+import { ArrowLeft, ArrowUpDown, Terminal, Download, Copy, Check, Tag, Bookmark, Edit2, ShieldCheck } from 'lucide-react'
 import {
   ChartConfig,
   ChartContainer,
@@ -20,6 +20,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { useUnlock } from '@/context/UnlockContext'
 import { LockedBadge } from '@/components/ui/LockedBadge'
 import { ContextWindowDiagnostics } from '@/components/ContextWindowDiagnostics'
+import { CircuitBreakerMonitor } from '@/components/CircuitBreakerMonitor'
+import { SessionTurnScrubber } from '@/components/SessionTurnScrubber'
+import { EnterpriseAuditModal } from '@/components/EnterpriseAuditModal'
 import { GitIntelligenceLedger } from '@/components/GitIntelligenceLedger'
 
 interface SessionDetailProps {
@@ -54,6 +57,7 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [sessionNote, setSessionNote] = useState('')
   const [isSavingNote, setIsSavingNote] = useState(false)
+  const [showAuditModal, setShowAuditModal] = useState(false)
 
   const loadSessions = async () => {
     if (window.electronAPI) {
@@ -411,6 +415,17 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
                           </>
                         )}
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowAuditModal(true)}
+                        disabled={turns.length === 0}
+                        className="h-6 text-[11px] px-2 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-semibold"
+                        title="Export Signed Enterprise Audit Bundle"
+                      >
+                        <ShieldCheck className="w-2.5 h-2.5 mr-1" />
+                        Audit
+                      </Button>
                     </div>
 
                     <div className="text-right font-mono border-l border-[#1f1f1f] pl-3">
@@ -515,6 +530,20 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
                     </div>
                   )}
 
+                  {/* Agentic Circuit Breaker & Runaway Loop Guard */}
+                  <div className="pt-2">
+                    <CircuitBreakerMonitor
+                      turns={turns}
+                      sessionId={selectedSessionId || undefined}
+                      modelName={selectedSession?.model}
+                    />
+                  </div>
+
+                  {/* Interactive Turn Scrubber & Delta Replay */}
+                  <div className="pt-2">
+                    <SessionTurnScrubber turns={turns} />
+                  </div>
+
                   {/* Context Window & Payload Bloat Diagnostics */}
                   <div className="pt-2">
                     <ContextWindowDiagnostics
@@ -579,6 +608,14 @@ export function SessionDetail({ projectId, onBack }: SessionDetailProps) {
 
       {/* Git Intelligence & Cost-per-Commit ROI */}
       <GitIntelligenceLedger projectId={projectId} projectName={selectedSession?.externalId} />
+
+      {/* Enterprise Audit Compliance Modal */}
+      <EnterpriseAuditModal
+        isOpen={showAuditModal}
+        onClose={() => setShowAuditModal(false)}
+        sessionId={selectedSessionId || ''}
+        sessionName={selectedSession?.externalId}
+      />
     </div>
   )
 }

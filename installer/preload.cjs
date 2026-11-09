@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('installerAPI', {
   closeWindow: () => ipcRenderer.invoke('window-close'),
+  minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
   getDefaultPath: () => ipcRenderer.invoke('get-default-path'),
   browseFolder: (currentPath) => ipcRenderer.invoke('browse-folder', currentPath),
   checkDiskSpace: (path) => ipcRenderer.invoke('check-disk-space', path),

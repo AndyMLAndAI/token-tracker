@@ -88,6 +88,21 @@ function getOrCreateSession(sessionId: string, projectId: string, model: string,
   return id
 }
 
+// Helper to reconstruct normalized file system path from sanitized directory name
+export function decodeClaudeProjectPath(sanitized: string): string {
+  let restored = sanitized
+  if (/^[a-zA-Z]--/.test(restored)) {
+    // Windows drive path e.g. "C--Users-..." -> "C:\Users\..."
+    restored = restored[0] + ':\\' + restored.slice(3).replace(/-/g, '\\')
+  } else if (restored.startsWith('-')) {
+    // POSIX absolute path e.g. "-home-user" -> "/home/user"
+    restored = restored.replace(/-/g, '/')
+  } else {
+    restored = restored.replace(/--/g, '/').replace(/-/g, '/')
+  }
+  return path.normalize(restored)
+}
+
 // Incremental byte-offset tailer for a single JSONL file
 export function ingestClaudeJsonlFile(filePath: string): { turnsAdded: number } {
   const db = getDb()
@@ -160,7 +175,7 @@ export function ingestClaudeJsonlFile(filePath: string): { turnsAdded: number } 
             if (!currentProjectId) {
               // Fallback project name from directory
               const parentDir = path.basename(path.dirname(filePath))
-              currentProjectId = getOrCreateProject(parentDir.replace(/--/g, '/').replace(/-/g, '/'))
+              currentProjectId = getOrCreateProject(decodeClaudeProjectPath(parentDir))
             }
 
             const modelName = message.model || 'claude-3-7-sonnet'

@@ -1,4 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
+import { motion } from 'motion/react'
+import { springPhysics, itemFadeInVariants, staggerContainerVariants } from '@/lib/motion'
+import { PromptCacheAnalytics } from '@/components/PromptCacheAnalytics'
+import { TokenVelocityGauge } from '@/components/TokenVelocityGauge'
+import { ModelPricingSimulator } from '@/components/ModelPricingSimulator'
+import { ReasoningTokenMetrics } from '@/components/ReasoningTokenMetrics'
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -304,7 +311,12 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
   }
 
   return (
-    <div className="space-y-8">
+    <motion.div
+      variants={staggerContainerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8"
+    >
       {/* Page Title & Subtitle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-[#1f1f1f]">
         <div>
@@ -457,168 +469,230 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
         </div>
       )}
 
-      {/* Vercel-style KPI Metric Cards with shadcn Sparklines */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Vercel-style KPI Metric Cards with Apple Tactile Motion Physics */}
+      <motion.div variants={staggerContainerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Today */}
-        <Card className="bg-[#050505] border-[#1f1f1f] hover:border-[#333333] transition-colors flex flex-col justify-between">
-          <CardHeader className="p-5 pb-1">
-            <CardTitle className="text-xs font-medium text-[#888888]">
-              Today (24h)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-5 pt-0 space-y-1">
-            <div className="text-2xl font-bold font-mono tracking-tight text-white tabular-nums">
-              {formatNumber(metrics?.tokensToday || 0)}
-            </div>
-            <div className="flex items-center justify-between text-xs text-[#666666] font-mono">
-              <span>{formatCurrency(metrics?.costToday || 0)}</span>
-              <span className="text-[#10b981] text-[10px]">Real-time turns</span>
-            </div>
-            {/* Sparkline */}
-            <div className="h-9 w-full pt-1">
-              <ChartContainer config={sparklineConfigToday} className="h-8 w-full">
-                <AreaChart data={sparklineToday} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="spark-today" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="hsl(var(--chart-1))"
-                    strokeWidth={1.5}
-                    fill="url(#spark-today)"
-                    dot={false}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent hideLabel indicator="line" />} />
-                </AreaChart>
-              </ChartContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div
+          variants={itemFadeInVariants}
+          whileHover={{ y: -3, transition: springPhysics.subtle }}
+          whileTap={{ scale: 0.99 }}
+        >
+          <Card className="h-full bg-[#050505] border-[#1f1f1f] hover:border-white/20 transition-colors flex flex-col justify-between">
+            <CardHeader className="p-5 pb-1">
+              <CardTitle className="text-xs font-medium text-[#888888]">
+                Today (24h)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0 space-y-1">
+              <div className="text-2xl font-bold font-mono tracking-tight text-white tabular-nums">
+                <AnimatedNumber value={metrics?.tokensToday || 0} formatter={formatNumber} />
+              </div>
+              <div className="flex items-center justify-between text-xs text-[#666666] font-mono">
+                <span>{formatCurrency(metrics?.costToday || 0)}</span>
+                <span className="text-[#10b981] text-[10px]">Real-time turns</span>
+              </div>
+              {/* Sparkline */}
+              <div className="h-9 w-full pt-1">
+                <ChartContainer config={sparklineConfigToday} className="h-8 w-full">
+                  <AreaChart data={sparklineToday} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="spark-today" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="hsl(var(--chart-1))"
+                      strokeWidth={1.5}
+                      fill="url(#spark-today)"
+                      dot={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent hideLabel indicator="line" />} />
+                  </AreaChart>
+                </ChartContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Metric 2: Past 7 Days */}
-        <Card className="bg-[#050505] border-[#1f1f1f] hover:border-[#333333] transition-colors flex flex-col justify-between">
-          <CardHeader className="p-5 pb-1">
-            <CardTitle className="text-xs font-medium text-[#888888]">
-              Past 7 Days
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-5 pt-0 space-y-1">
-            <div className="text-2xl font-bold font-mono tracking-tight text-white tabular-nums">
-              {formatNumber(metrics?.tokensWeek || 0)}
-            </div>
-            <div className="flex items-center justify-between text-xs text-[#666666] font-mono">
-              <span>{formatCurrency(metrics?.costWeek || 0)}</span>
-              <span className="text-[#888888] text-[10px]">Weekly burn</span>
-            </div>
-            {/* Sparkline */}
-            <div className="h-9 w-full pt-1">
-              <ChartContainer config={sparklineConfigWeek} className="h-8 w-full">
-                <AreaChart data={sparklineWeek} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="spark-week" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="hsl(var(--chart-2))"
-                    strokeWidth={1.5}
-                    fill="url(#spark-week)"
-                    dot={false}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent hideLabel indicator="line" />} />
-                </AreaChart>
-              </ChartContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div
+          variants={itemFadeInVariants}
+          whileHover={{ y: -3, transition: springPhysics.subtle }}
+          whileTap={{ scale: 0.99 }}
+        >
+          <Card className="h-full bg-[#050505] border-[#1f1f1f] hover:border-white/20 transition-colors flex flex-col justify-between">
+            <CardHeader className="p-5 pb-1">
+              <CardTitle className="text-xs font-medium text-[#888888]">
+                Past 7 Days
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0 space-y-1">
+              <div className="text-2xl font-bold font-mono tracking-tight text-white tabular-nums">
+                <AnimatedNumber value={metrics?.tokensWeek || 0} formatter={formatNumber} />
+              </div>
+              <div className="flex items-center justify-between text-xs text-[#666666] font-mono">
+                <span>{formatCurrency(metrics?.costWeek || 0)}</span>
+                <span className="text-[#888888] text-[10px]">Weekly burn</span>
+              </div>
+              {/* Sparkline */}
+              <div className="h-9 w-full pt-1">
+                <ChartContainer config={sparklineConfigWeek} className="h-8 w-full">
+                  <AreaChart data={sparklineWeek} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="spark-week" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="hsl(var(--chart-2))"
+                      strokeWidth={1.5}
+                      fill="url(#spark-week)"
+                      dot={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent hideLabel indicator="line" />} />
+                  </AreaChart>
+                </ChartContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Metric 3: Past 30 Days */}
-        <Card className="bg-[#050505] border-[#1f1f1f] hover:border-[#333333] transition-colors flex flex-col justify-between">
-          <CardHeader className="p-5 pb-1">
-            <CardTitle className="text-xs font-medium text-[#888888]">
-              Past 30 Days
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-5 pt-0 space-y-1">
-            <div className="text-2xl font-bold font-mono tracking-tight text-white tabular-nums">
-              {formatNumber(metrics?.tokensMonth || 0)}
-            </div>
-            <div className="flex items-center justify-between text-xs text-[#666666] font-mono">
-              <span>{formatCurrency(metrics?.costMonth || 0)}</span>
-              <span className="text-[#888888] text-[10px]">Monthly aggregate</span>
-            </div>
-            {/* Sparkline */}
-            <div className="h-9 w-full pt-1">
-              <ChartContainer config={sparklineConfigMonth} className="h-8 w-full">
-                <AreaChart data={sparklineMonth} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="spark-month" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--chart-3))" stopOpacity={0.25} />
-                      <stop offset="100%" stopColor="hsl(var(--chart-3))" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="hsl(var(--chart-3))"
-                    strokeWidth={1.5}
-                    fill="url(#spark-month)"
-                    dot={false}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent hideLabel indicator="line" />} />
-                </AreaChart>
-              </ChartContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div
+          variants={itemFadeInVariants}
+          whileHover={{ y: -3, transition: springPhysics.subtle }}
+          whileTap={{ scale: 0.99 }}
+        >
+          <Card className="h-full bg-[#050505] border-[#1f1f1f] hover:border-white/20 transition-colors flex flex-col justify-between">
+            <CardHeader className="p-5 pb-1">
+              <CardTitle className="text-xs font-medium text-[#888888]">
+                Past 30 Days
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0 space-y-1">
+              <div className="text-2xl font-bold font-mono tracking-tight text-white tabular-nums">
+                <AnimatedNumber value={metrics?.tokensMonth || 0} formatter={formatNumber} />
+              </div>
+              <div className="flex items-center justify-between text-xs text-[#666666] font-mono">
+                <span>{formatCurrency(metrics?.costMonth || 0)}</span>
+                <span className="text-[#888888] text-[10px]">Monthly aggregate</span>
+              </div>
+              {/* Sparkline */}
+              <div className="h-9 w-full pt-1">
+                <ChartContainer config={sparklineConfigMonth} className="h-8 w-full">
+                  <AreaChart data={sparklineMonth} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="spark-month" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--chart-3))" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="hsl(var(--chart-3))" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="hsl(var(--chart-3))"
+                      strokeWidth={1.5}
+                      fill="url(#spark-month)"
+                      dot={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent hideLabel indicator="line" />} />
+                  </AreaChart>
+                </ChartContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Metric 4: Cache Savings */}
-        <Card className="bg-[#050505] border-[#1f1f1f] hover:border-[#333333] transition-colors flex flex-col justify-between">
-          <CardHeader className="p-5 pb-1">
-            <CardTitle className="text-xs font-medium text-[#888888]">
-              Prompt Cache Read
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-5 pt-0 space-y-1">
-            <div className="text-2xl font-bold font-mono tracking-tight text-[#10b981] tabular-nums">
-              {formatNumber(cacheReadTokens)}
-            </div>
-            <div className="flex items-center justify-between text-xs text-[#666666] font-mono">
-              <span>Hit ratio: {cacheHitPercentage}%</span>
-              <span className="text-[#10b981] text-[10px]">Discounted</span>
-            </div>
-            {/* Sparkline */}
-            <div className="h-9 w-full pt-1">
-              <ChartContainer config={sparklineConfigCache} className="h-8 w-full">
-                <AreaChart data={sparklineCache} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="spark-cache" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="hsl(var(--chart-1))"
-                    strokeWidth={1.5}
-                    fill="url(#spark-cache)"
-                    dot={false}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent hideLabel indicator="line" />} />
-                </AreaChart>
-              </ChartContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <motion.div
+          variants={itemFadeInVariants}
+          whileHover={{ y: -3, transition: springPhysics.subtle }}
+          whileTap={{ scale: 0.99 }}
+        >
+          <Card className="h-full bg-[#050505] border-[#1f1f1f] hover:border-white/20 transition-colors flex flex-col justify-between">
+            <CardHeader className="p-5 pb-1">
+              <CardTitle className="text-xs font-medium text-[#888888]">
+                Prompt Cache Read
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0 space-y-1">
+              <div className="text-2xl font-bold font-mono tracking-tight text-[#10b981] tabular-nums">
+                <AnimatedNumber value={cacheReadTokens} formatter={formatNumber} />
+              </div>
+              <div className="flex items-center justify-between text-xs text-[#666666] font-mono">
+                <span>Hit ratio: {cacheHitPercentage}%</span>
+                <span className="text-[#10b981] text-[10px]">Discounted</span>
+              </div>
+              {/* Sparkline */}
+              <div className="h-9 w-full pt-1">
+                <ChartContainer config={sparklineConfigCache} className="h-8 w-full">
+                  <AreaChart data={sparklineCache} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="spark-cache" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="hsl(var(--chart-1))"
+                      strokeWidth={1.5}
+                      fill="url(#spark-cache)"
+                      dot={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent hideLabel indicator="line" />} />
+                  </AreaChart>
+                </ChartContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+
+      {/* Real-time Token Velocity & Burn Rate Speedometer */}
+      <motion.div variants={itemFadeInVariants}>
+        <TokenVelocityGauge
+          tokensToday={metrics?.tokensToday || 0}
+          costToday={metrics?.costToday || 0}
+          hourlyToday={metrics?.hourlyToday || []}
+        />
+      </motion.div>
+
+      {/* Anthropic & Apple Prompt Caching Efficiency & Financial Savings Analysis */}
+      <motion.div variants={itemFadeInVariants}>
+        <PromptCacheAnalytics
+          inputTokens={allTime.inputTokens || 0}
+          outputTokens={allTime.outputTokens || 0}
+          cacheReadTokens={cacheReadTokens}
+          cacheCreationTokens={cacheCreationTokens}
+          totalCost={allTime.totalCost || 0}
+        />
+      </motion.div>
+
+      {/* Anthropic Reasoning & Extended Thinking Deliberation Analytics */}
+      <motion.div variants={itemFadeInVariants}>
+        <ReasoningTokenMetrics
+          outputTokens={allTime.outputTokens || 0}
+          totalCost={allTime.totalCost || 0}
+        />
+      </motion.div>
+
+      {/* Interactive Frontier Model Pricing & Cost Arbitrage Simulator */}
+      <motion.div variants={itemFadeInVariants}>
+        <ModelPricingSimulator
+          inputTokens={allTime.inputTokens || 0}
+          outputTokens={allTime.outputTokens || 0}
+          cacheReadTokens={cacheReadTokens}
+          totalCost={allTime.totalCost || 0}
+        />
+      </motion.div>
 
       {/* Stacked Area Chart: Token Burn Over Time (shadcn AreaChart + ChartContainer) */}
       <Card className="bg-[#050505] border-[#1f1f1f]">
@@ -1110,6 +1184,6 @@ export function Dashboard({ onSelectProject }: DashboardProps) {
           </Card>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

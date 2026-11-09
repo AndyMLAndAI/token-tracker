@@ -20,7 +20,7 @@ export function Navbar() {
   ]
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#1f1f1f] bg-black/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-black/10 bg-white/85 backdrop-blur-md">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         {/* Left: Branding */}
         <Link href="/" className="flex items-center space-x-2.5 group">
@@ -31,10 +31,10 @@ export function Navbar() {
           >
             <AppLogo size={20} />
           </motion.div>
-          <span className="font-sans font-semibold text-[13px] tracking-tight text-white group-hover:text-white/90 transition-colors duration-200">
+          <span className="font-sans font-medium text-[13px] tracking-tight text-black transition-colors duration-200">
             Token Tracker
           </span>
-          <Badge variant="muted" className="text-[10px] font-mono px-1.5 py-0.5">
+          <Badge variant="outline" className="rounded-full border-black/15 bg-white px-2 py-0.5 text-[10px] font-mono text-[#666]">
             v1.8
           </Badge>
         </Link>
@@ -48,13 +48,13 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={`relative px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 ${
-                  isActive ? "text-white" : "text-[#888888] hover:text-white"
+                  isActive ? "text-black" : "text-[#666] hover:text-black"
                 }`}
               >
                 {isActive && (
                   <motion.div
                     layoutId={shouldReduceMotion ? undefined : "navbar-pill"}
-                    className="absolute inset-0 bg-[#181818] border border-[#282828] rounded-md -z-10"
+                    className="absolute inset-0 bg-[#f1f1f1] border border-black/10 rounded-full -z-10"
                     transition={{
                       type: "spring",
                       stiffness: 450,
@@ -76,7 +76,7 @@ export function Navbar() {
             transition={{ type: "spring", stiffness: 450, damping: 25 }}
             className="hidden sm:inline-flex"
           >
-            <Button asChild size="sm" className="bg-white text-black font-semibold hover:bg-white/90">
+            <Button asChild size="sm" className="rounded-full bg-black text-white font-medium hover:bg-[#222]">
               <Link href="/download" className="flex items-center gap-1.5">
                 <Download className="w-3.5 h-3.5" />
                 <span>Download v1.8</span>

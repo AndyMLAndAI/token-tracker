@@ -9,16 +9,15 @@ let mainWindow = null
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 420,
-    height: 420,
+    width: 540,
+    height: 480,
     resizable: false,
     maximizable: false,
-    minimizable: false,
+    minimizable: true,
     fullscreenable: false,
-    frame: false, // NO native OS window chrome at all
-    roundedCorners: false, // Force 100% sharp square 90-degree corners on Windows 11
+    frame: false, // Custom frameless window
     center: true,
-    backgroundColor: '#c0c0c0',
+    backgroundColor: '#050505',
     icon: path.join(__dirname, 'assets', 'icon.ico'),
     title: 'Token Tracker Setup',
     show: true,
@@ -53,6 +52,10 @@ app.on('window-all-closed', () => {
 // IPC Handlers
 ipcMain.handle('window-close', () => {
   if (mainWindow) mainWindow.close()
+})
+
+ipcMain.handle('window-minimize', () => {
+  if (mainWindow) mainWindow.minimize()
 })
 
 ipcMain.handle('get-default-path', () => {

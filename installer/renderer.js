@@ -13,32 +13,28 @@ const btnBack = document.getElementById('btnBack')
 const btnNext = document.getElementById('btnNext')
 const btnFinish = document.getElementById('btnFinish')
 const btnCancel = document.getElementById('btnCancel')
-const btnClose = document.getElementById('btnClose')
+const btnTitlebarMinimize = document.getElementById('btnTitlebarMinimize')
+const btnTitlebarClose = document.getElementById('btnTitlebarClose')
 const btnBrowse = document.getElementById('btnBrowse')
 const inputInstallPath = document.getElementById('inputInstallPath')
 const lblSpaceRequired = document.getElementById('lblSpaceRequired')
 const lblSpaceAvailable = document.getElementById('lblSpaceAvailable')
-const progressContainer = document.getElementById('progressBlocksContainer')
+const progressFill = document.getElementById('progressFill')
+const lblProgressPct = document.getElementById('lblProgressPct')
 const lblInstallStatus = document.getElementById('lblInstallStatus')
 const chkLaunchApp = document.getElementById('chkLaunchApp')
 
-// Render segmented blocks for the Win95 progress bar
+// Update continuous progress bar & percentages
 function updateProgress(percent, statusText) {
+  const rounded = Math.min(100, Math.max(0, Math.round(percent)))
   if (statusText && lblInstallStatus) {
     lblInstallStatus.textContent = statusText
   }
-
-  if (!progressContainer) return
-  const containerWidth = progressContainer.clientWidth || 480
-  const blockSlot = 12 // 10px block + 2px gap
-  const totalSlots = Math.max(1, Math.floor(containerWidth / blockSlot))
-  const activeBlocksCount = Math.min(totalSlots, Math.round((percent / 100) * totalSlots))
-
-  progressContainer.innerHTML = ''
-  for (let i = 0; i < activeBlocksCount; i++) {
-    const block = document.createElement('div')
-    block.className = 'progress-block'
-    progressContainer.appendChild(block)
+  if (lblProgressPct) {
+    lblProgressPct.textContent = `${rounded}%`
+  }
+  if (progressFill) {
+    progressFill.style.width = `${rounded}%`
   }
 }
 
@@ -71,7 +67,7 @@ function showStep(stepIndex) {
   if (stepIndex === 0) { // Welcome
     btnBack.disabled = true
     btnNext.disabled = false
-    btnNext.textContent = 'Next >'
+    btnNext.textContent = 'Continue'
     btnNext.style.display = 'inline-flex'
     btnFinish.style.display = 'none'
     btnCancel.disabled = false
@@ -79,7 +75,7 @@ function showStep(stepIndex) {
   } else if (stepIndex === 1) { // License
     btnBack.disabled = false
     btnNext.disabled = false
-    btnNext.textContent = 'Next >'
+    btnNext.textContent = 'Agree & Continue'
     btnNext.style.display = 'inline-flex'
     btnFinish.style.display = 'none'
     btnCancel.disabled = false
@@ -127,7 +123,7 @@ async function runInstallation() {
         updateProgress(100, 'Installation complete.')
         setTimeout(() => {
           showStep(4) // Advance to finish screen
-        }, 600)
+        }, 500)
       } else {
         alert('Installation encountered an error: ' + (res.error || 'Unknown error'))
         btnCancel.disabled = false
@@ -147,7 +143,7 @@ async function runInstallation() {
         clearInterval(timer)
         setTimeout(() => showStep(4), 500)
       }
-    }, 150)
+    }, 120)
   }
 }
 
@@ -188,10 +184,18 @@ btnCancel.addEventListener('click', () => {
   }
 })
 
-if (btnClose) {
-  btnClose.addEventListener('click', () => {
+if (btnTitlebarClose) {
+  btnTitlebarClose.addEventListener('click', () => {
     if (window.installerAPI) {
       window.installerAPI.closeWindow()
+    }
+  })
+}
+
+if (btnTitlebarMinimize) {
+  btnTitlebarMinimize.addEventListener('click', () => {
+    if (window.installerAPI) {
+      window.installerAPI.minimizeWindow()
     }
   })
 }

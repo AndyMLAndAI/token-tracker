@@ -51,7 +51,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow, engine: Ingestion
       FROM turns
       WHERE timestamp >= ?
     `)
-    const todayRow = todayStmt.get(oneDayAgo) as any
+    const todayRow = todayStmt.get(todayStart) as any
 
     // Week tokens
     const weekStmt = db.prepare(`

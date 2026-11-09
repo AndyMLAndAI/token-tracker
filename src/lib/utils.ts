@@ -5,17 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatNumber(num: number): string {
-  if (num >= 1_000_000_000) {
-    return (num / 1_000_000_000).toFixed(1) + 'B'
+export function formatNumber(num: number | string | null | undefined): string {
+  const n = Number(num ?? 0)
+  if (isNaN(n) || n === 0) return '0'
+  if (n >= 1_000_000_000) {
+    return (n / 1_000_000_000).toFixed(1) + 'B'
   }
-  if (num >= 1_000_000) {
-    return (num / 1_000_000).toFixed(1) + 'M'
+  if (n >= 1_000_000) {
+    return (n / 1_000_000).toFixed(1) + 'M'
   }
-  if (num >= 1_000) {
-    return (num / 1_000).toFixed(1) + 'k'
+  if (n >= 1_000) {
+    return (n / 1_000).toFixed(1) + 'k'
   }
-  return num.toLocaleString()
+  return n.toLocaleString()
 }
 
 // Approximate reference exchange rates relative to USD.
@@ -37,11 +39,12 @@ export function getCurrentCurrency(): string {
   }
 }
 
-export function formatCurrency(usd: number, customCurrency?: string): string {
+export function formatCurrency(usd: number | string | null | undefined, customCurrency?: string): string {
   const code = customCurrency || getCurrentCurrency()
   const info = CURRENCY_MAP[code] || CURRENCY_MAP.USD
-  const converted = usd * info.rate
-  if (converted === 0) return `${info.symbol}0.00`
+  const raw = Number(usd ?? 0)
+  if (isNaN(raw) || raw === 0) return `${info.symbol}0.00`
+  const converted = raw * info.rate
   if (converted < 0.01) return `< ${info.symbol}0.01`
   if (code === 'JPY') {
     return `${info.symbol}${Math.round(converted).toLocaleString()}`
@@ -49,8 +52,11 @@ export function formatCurrency(usd: number, customCurrency?: string): string {
   return `${info.symbol}${converted.toFixed(2)}`
 }
 
-export function formatDate(timestamp: number): string {
-  const d = new Date(timestamp)
+export function formatDate(timestamp: number | string | null | undefined): string {
+  if (!timestamp) return 'n/a'
+  const ts = Number(timestamp)
+  if (isNaN(ts) || ts <= 0) return 'n/a'
+  const d = new Date(ts)
   return d.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -60,8 +66,11 @@ export function formatDate(timestamp: number): string {
   })
 }
 
-export function formatRelativeTime(timestamp: number): string {
-  const diff = Date.now() - timestamp
+export function formatRelativeTime(timestamp: number | string | null | undefined): string {
+  if (!timestamp) return 'never'
+  const ts = Number(timestamp)
+  if (isNaN(ts) || ts <= 0) return 'never'
+  const diff = Date.now() - ts
   const minutes = Math.floor(diff / 60000)
   if (minutes < 1) return 'just now'
   if (minutes < 60) return `${minutes}m ago`
@@ -69,5 +78,5 @@ export function formatRelativeTime(timestamp: number): string {
   if (hours < 24) return `${hours}h ago`
   const days = Math.floor(hours / 24)
   if (days < 30) return `${days}d ago`
-  return formatDate(timestamp)
+  return formatDate(ts)
 }

@@ -25,6 +25,7 @@
     "clsx": "^2.1.1",
     "js-tiktoken": "^1.0.21",
     "lucide-react": "^1.41.0",
+    "motion": "^14.10.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "recharts": "^3.10.1",

@@ -34,7 +34,7 @@ export function getReadOnlyDb(): DatabaseSync {
   if (!dbPath) {
     console.error(
       '\n✖ Error: No Token Tracker data found.\n' +
-      '  Install and run the desktop app first: https://tokentracker.dev\n' +
+      '  Install and run the desktop app first: https://gettokentracker.netlify.app/\n' +
       '  (Checked: ~/.token_tracker/token_tracker.db, %APPDATA%/TokenTracker/token_tracker.db)\n'
     )
     process.exit(1)

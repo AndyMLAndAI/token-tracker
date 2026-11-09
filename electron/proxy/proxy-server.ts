@@ -1,6 +1,7 @@
 import http from 'node:http'
 import https from 'node:https'
 import crypto from 'node:crypto'
+import zlib from 'node:zlib'
 import { getDb } from '../db/database'
 import { calculateTurnCost } from '../ingestion/pricing'
 
@@ -134,8 +135,23 @@ class LocalLoopbackProxy {
           upstreamRes.on('end', () => {
             res.end()
 
-            // Process usage statistics asynchronously after response finishes
-            const fullResponse = Buffer.concat(responseChunks).toString('utf8')
+            // Process usage statistics asynchronously after response finishes (handling compressed responses)
+            const rawBuf = Buffer.concat(responseChunks)
+            let fullResponse = ''
+            const encoding = (upstreamRes.headers['content-encoding'] || '').toLowerCase()
+            try {
+              if (encoding === 'gzip') {
+                fullResponse = zlib.gunzipSync(rawBuf).toString('utf8')
+              } else if (encoding === 'deflate') {
+                fullResponse = zlib.inflateSync(rawBuf).toString('utf8')
+              } else if (encoding === 'br') {
+                fullResponse = zlib.brotliDecompressSync(rawBuf).toString('utf8')
+              } else {
+                fullResponse = rawBuf.toString('utf8')
+              }
+            } catch {
+              fullResponse = rawBuf.toString('utf8')
+            }
             this.recordLiveUsage(modelName, projectName, fullResponse, isAnthropic)
           })
         }

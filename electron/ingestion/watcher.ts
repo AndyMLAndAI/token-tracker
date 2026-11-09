@@ -162,7 +162,7 @@ export class IngestionEngine {
     } else if (filePath.endsWith('.json') && filePath.includes('.continue')) {
       const res = ingestContinueSessions()
       if (res.turnsIngested > 0) changed = true
-    } else if (filePath.includes(`${path.sep}.aider${path.sep}`) && (filePath.endsWith('.jsonl') || filePath.endsWith('.md'))) {
+    } else if (filePath.includes('.aider') && (filePath.endsWith('.jsonl') || filePath.endsWith('.md'))) {
       const res = ingestAllAiderData()
       if (res.totalTurns > 0) changed = true
     }

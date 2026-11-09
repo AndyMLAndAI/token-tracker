@@ -26,7 +26,7 @@ export function FadeIn({
 
   return (
     <motion.div
-      initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: yOffset }}
+      initial={false}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: viewportOnce, margin: "-40px" }}
       transition={{
@@ -60,7 +60,7 @@ export function Stagger({
 
   return (
     <motion.div
-      initial={shouldReduceMotion ? "visible" : "hidden"}
+      initial="visible"
       whileInView="visible"
       viewport={{ once: true, margin: "-40px" }}
       variants={{

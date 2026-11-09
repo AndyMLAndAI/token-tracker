@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { LayoutDashboard, FolderGit2, Settings, RefreshCw, Camera, CheckCircle2, XCircle, AlertTriangle, X } from 'lucide-react'
+import { motion } from 'motion/react'
+import { LayoutDashboard, FolderGit2, Settings, RefreshCw, Camera, CheckCircle2, XCircle, AlertTriangle, X, Search, Activity, Volume2, VolumeX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -7,6 +8,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { TitleBar } from '@/components/layout/TitleBar'
 import { AppLogo } from '@/components/ui/AppLogo'
+import { CommandPalette } from '@/components/CommandPalette'
+import { appleSpring } from '@/lib/motion'
+import { playClick, playSuccess, isAudioEnabled, setAudioEnabled } from '@/lib/audio'
 
 export type PageId = 'dashboard' | 'projects' | 'session-detail' | 'settings'
 
@@ -29,6 +33,26 @@ export function Shell({
   const [isResyncing, setIsResyncing] = useState(false)
   const [screenshotStatus, setScreenshotStatus] = useState<string | null>(null)
   const [activeAlerts, setActiveAlerts] = useState<any[]>([])
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [sfxEnabled, setSfxEnabled] = useState(isAudioEnabled)
+
+  const handleToggleSfx = () => {
+    const next = !sfxEnabled
+    setSfxEnabled(next)
+    setAudioEnabled(next)
+    if (next) playClick()
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setIsCommandPaletteOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const loadAlerts = async () => {
     if (window.electronAPI) {
@@ -83,10 +107,12 @@ export function Shell({
 
   const handleResync = async () => {
     if (!window.electronAPI || isResyncing) return
+    playClick()
     setIsResyncing(true)
     try {
       await window.electronAPI.forceResync()
       await loadSources()
+      playSuccess()
     } catch (err) {
       console.error('Failed to resync:', err)
     } finally {
@@ -145,23 +171,32 @@ export function Shell({
               const Icon = item.icon
               const isActive = activePage === item.id || (item.id === 'projects' && activePage === 'session-detail')
               return (
-                <button
+                <motion.button
                   key={item.id}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => {
+                    playClick()
                     if (item.id === 'projects') {
                       if (setSelectedProjectId) setSelectedProjectId(undefined)
                     }
                     setActivePage(item.id)
                   }}
-                  className={`w-full flex items-center space-x-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors ${
+                  className={`relative w-full flex items-center space-x-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
                     isActive
-                      ? 'bg-[#181818] text-white border border-[#282828]'
-                      : 'text-[#888888] hover:text-white hover:bg-[#111111]'
+                      ? 'text-white'
+                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04]'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#888888]'}`} />
-                  <span>{item.label}</span>
-                </button>
+                  {isActive && (
+                    <motion.div
+                      layoutId="sidebar-active-pill"
+                      transition={appleSpring}
+                      className="absolute inset-0 rounded-md bg-white/[0.09] border border-white/10 shadow-sm"
+                    />
+                  )}
+                  <Icon className={`relative z-10 w-4 h-4 ${isActive ? 'text-white' : 'text-zinc-400'}`} />
+                  <span className="relative z-10">{item.label}</span>
+                </motion.button>
               )
             })}
           </nav>
@@ -233,7 +268,48 @@ export function Shell({
               )}
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
+              {/* Live Telemetry Pulse Orb */}
+              <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-[11px] font-mono">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                <span className="font-medium tracking-tight">Live Tailing</span>
+              </div>
+
+              {/* Quick Command Palette Button */}
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setIsCommandPaletteOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-xs text-zinc-400 hover:text-white transition-all shadow-sm"
+              >
+                <Search className="w-3.5 h-3.5 text-zinc-400" />
+                <span className="text-[11px]">Search or jump to...</span>
+                <kbd className="text-[10px] font-mono px-1 py-0.2 rounded border border-white/10 bg-white/5 text-zinc-400">
+                  Ctrl+K
+                </kbd>
+              </motion.button>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleToggleSfx}
+                    className={`h-8 w-8 rounded-md border flex items-center justify-center transition-colors ${
+                      sfxEnabled
+                        ? 'border-white/10 bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10'
+                        : 'border-transparent text-zinc-600 hover:text-zinc-400'
+                    }`}
+                  >
+                    {sfxEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                  </motion.button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {sfxEnabled ? 'Mute micro-haptics' : 'Enable micro-haptics'}
+                </TooltipContent>
+              </Tooltip>
+
               <Button
                 variant="outline"
                 size="sm"
@@ -276,6 +352,20 @@ export function Shell({
         </div>
       </div>
       </div>
+
+      {/* Global Command Palette (Ctrl+K / Cmd+K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={(page, projectId) => {
+          if (projectId && setSelectedProjectId) {
+            setSelectedProjectId(projectId)
+          }
+          setActivePage(page)
+        }}
+        onResync={handleResync}
+        onCaptureScreenshot={handleCaptureScreenshot}
+      />
     </TooltipProvider>
   )
 }

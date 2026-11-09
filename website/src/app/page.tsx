@@ -1,394 +1,64 @@
 "use client"
 
-import React from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
-import { motion, useReducedMotion } from "framer-motion"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
+import { Activity, ArrowRight, Check, FolderGit2, Radio, ScanLine, ShieldCheck, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion/FadeIn"
-import { Counter } from "@/components/motion/Counter"
 import { appleEase } from "@/components/motion/animations"
-import {
-  Download,
-  ArrowRight,
-  FileCheck2,
-  Cpu,
-  Bell,
-  FolderGit2,
-} from "lucide-react"
+
+const sources = [
+  { id: "claude", name: "Claude Code", detail: "JSONL session stream", mode: "Exact", volume: "1.84M", bars: [36, 58, 44, 78, 55, 88, 67] },
+  { id: "cursor", name: "Cursor", detail: "Local workspace database", mode: "Estimated", volume: "482K", bars: [24, 42, 31, 62, 48, 39, 72] },
+  { id: "cline", name: "Cline + Roo", detail: "Task usage history", mode: "Exact", volume: "298K", bars: [42, 24, 55, 48, 76, 42, 68] },
+]
+
+const features = [
+  { icon: FolderGit2, kicker: "Attribution", title: "Every token has a home.", body: "See the project, conversation, model, and cost behind every unit of usage." },
+  { icon: ShieldCheck, kicker: "Privacy", title: "Your telemetry never leaves.", body: "All parsing, estimation, and storage happens locally on your workstation." },
+  { icon: ScanLine, kicker: "Clarity", title: "Exact when possible.", body: "Clear provenance badges show which measurements come straight from provider data." },
+]
 
 export default function HomePage() {
   const shouldReduceMotion = useReducedMotion()
-
-  const features = [
-    {
-      icon: FolderGit2,
-      title: "Per-Project & Per-Chat Breakdown",
-      description:
-        "Every token and cent is attributed to the exact repository folder or conversation thread, ending the mystery of single blended monthly API invoices.",
-      badge: "Granular Attribution",
-    },
-    {
-      icon: FileCheck2,
-      title: "Verified Data Provenance",
-      description:
-        "Transparently distinguishes between exact provider response tokens, local BPE calculations (js-tiktoken), and loopback proxy captures with audit badges.",
-      badge: "Zero Guesswork",
-    },
-    {
-      icon: Cpu,
-      title: "Multi-Source Local Ingestion",
-      description:
-        "Native file system watchers monitor Claude Code JSONL logs, Google Antigravity transcripts, Cursor state databases, and Cline/Roo Code task stores.",
-      badge: "Automatic Discovery",
-    },
-    {
-      icon: Bell,
-      title: "Budget Thresholds & Alerts",
-      description:
-        "Configure custom daily, weekly, or monthly spend limits globally and per project. Evaluated on ingestion with native OS background notifications.",
-      badge: "Spend Control",
-    },
-  ]
-
-  const supportedTools = [
-    { name: "Claude Code CLI", type: "JSONL Streaming Logs", status: "Exact Tokens" },
-    { name: "Google Antigravity", type: "Transcript Event Logs", status: "Exact Tokens" },
-    { name: "Cline & Roo Code", type: "Task State Files", status: "Exact Tokens" },
-    { name: "Cursor IDE", type: "SQLite State Databases", status: "Local Estimates" },
-    { name: "Windsurf Cascades", type: "Global App Storage", status: "Local Estimates" },
-    { name: "Aider CLI", type: "History Markdown Logs", status: "Exact Tokens" },
-  ]
+  const [activeSource, setActiveSource] = useState("claude")
+  const source = useMemo(() => sources.find((item) => item.id === activeSource) ?? sources[0], [activeSource])
 
   return (
-    <div className="flex flex-col items-center w-full">
-      {/* HERO SECTION */}
-      <section className="w-full pt-16 pb-14 px-4 sm:px-6 max-w-5xl flex flex-col items-center text-center space-y-6">
-        {/* Status Pill */}
-        <FadeIn delay={0.05} yOffset={12}>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#262626] bg-[#0c0c0c] text-xs text-[#a1a1aa] transition-colors hover:border-[#3a3a3a]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-            <span className="font-mono text-[11px] text-[#e4e4e7]">v1.8 Released</span>
-            <span className="text-[#52525b]">&bull;</span>
-            <span>100% Local &bull; Zero Cloud Telemetry</span>
-          </div>
+    <div className="w-full overflow-hidden bg-white text-black">
+      <section className="relative mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-6xl flex-col items-center justify-center px-5 pb-16 pt-20 text-center sm:px-8">
+        <motion.div aria-hidden="true" animate={shouldReduceMotion ? {} : { scale: [1, 1.08, 1], opacity: [0.45, 0.8, 0.45] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} className="pointer-events-none absolute left-1/2 top-[44%] h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/[0.08]" />
+        <motion.div aria-hidden="true" animate={shouldReduceMotion ? {} : { rotate: 360 }} transition={{ duration: 28, repeat: Infinity, ease: "linear" }} className="pointer-events-none absolute left-1/2 top-[44%] h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-black/[0.08]" />
+        <FadeIn delay={0.05} yOffset={10} className="relative"><Badge variant="outline" className="rounded-full border-black/15 bg-white px-3 py-1 text-[11px] font-medium text-[#666] shadow-none"><span className="mr-2 inline-flex h-1.5 w-1.5 rounded-full bg-black" />v1.8 · Local-first telemetry</Badge></FadeIn>
+        <FadeIn delay={0.12} yOffset={18} className="relative mt-7"><h1 className="max-w-4xl text-balance text-5xl font-medium leading-[0.96] tracking-[-0.055em] sm:text-7xl md:text-8xl">Know where every token goes.</h1></FadeIn>
+        <FadeIn delay={0.2} yOffset={18} className="relative mt-7 max-w-2xl"><p className="text-pretty text-lg leading-8 tracking-[-0.01em] text-[#666] sm:text-xl">A quiet, local command center for the AI work already happening on your machine.</p></FadeIn>
+        <FadeIn delay={0.28} yOffset={16} className="relative mt-9 flex flex-col items-center gap-3 sm:flex-row">
+          <motion.div whileHover={shouldReduceMotion ? {} : { y: -2 }} whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}><Button asChild size="lg" className="h-11 rounded-full bg-black px-6 text-sm font-medium text-white shadow-none hover:bg-[#222]"><Link href="/download">Download for Windows <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></motion.div>
+          <Button asChild variant="outline" size="lg" className="h-11 rounded-full border-black/15 bg-white px-6 text-sm font-medium shadow-none hover:bg-[#f1f1f1]"><Link href="#live-view">See it in motion <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
         </FadeIn>
-
-        {/* Main Title */}
-        <FadeIn delay={0.12} yOffset={16}>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-sans font-bold tracking-tight text-white max-w-3xl leading-[1.1]">
-            Token Tracker
-          </h1>
-        </FadeIn>
-
-        {/* Value Prop */}
-        <FadeIn delay={0.18} yOffset={16}>
-          <p className="text-lg sm:text-xl text-[#a1a1aa] max-w-2xl font-normal leading-relaxed">
-            Exact local token and cost tracking, broken down by project and chat — not just global totals.
-          </p>
-        </FadeIn>
-
-        {/* Extended Subtitle */}
-        <FadeIn delay={0.24} yOffset={16}>
-          <p className="text-xs sm:text-sm text-[#71717a] max-w-xl leading-relaxed">
-            Purpose-built for agentic engineering workflows. Ingests local developer session files directly from Claude Code, Antigravity, Cursor, and Cline without sending a single byte to external servers.
-          </p>
-        </FadeIn>
-
-        {/* CTA Button Group with Spring Hover */}
-        <FadeIn delay={0.3} yOffset={16}>
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-            <motion.div
-              whileHover={shouldReduceMotion ? {} : { scale: 1.02 }}
-              whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 450, damping: 25 }}
-              className="w-full sm:w-auto"
-            >
-              <Button asChild size="lg" className="bg-white text-black font-semibold hover:bg-white/90 w-full sm:w-auto h-11 px-6 shadow-lg shadow-white/5">
-                <Link href="/download" className="flex items-center gap-2">
-                  <Download className="w-4 h-4" />
-                  <span>Download for Windows (.exe)</span>
-                </Link>
-              </Button>
-            </motion.div>
-
-            <motion.div
-              whileHover={shouldReduceMotion ? {} : { scale: 1.02 }}
-              whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 450, damping: 25 }}
-              className="w-full sm:w-auto"
-            >
-              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto h-11 px-6 border-[#262626] text-white hover:bg-[#141414] hover:border-[#383838]">
-                <Link href="/about" className="flex items-center gap-2">
-                  <span>How It Works</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-[#888888]" />
-                </Link>
-              </Button>
-            </motion.div>
-          </div>
-        </FadeIn>
-
-        {/* Small Footnote */}
-        <FadeIn delay={0.36} yOffset={10}>
-          <div className="text-[11px] text-[#555555] font-mono flex items-center gap-2 pt-1">
-            <span>Windows 10 / 11 (64-bit)</span>
-            <span>&bull;</span>
-            <span>Authentic Win95 Setup Wizard</span>
-            <span>&bull;</span>
-            <span>~263 MB Single Binary</span>
-          </div>
-        </FadeIn>
+        <FadeIn delay={0.36} yOffset={12} className="relative mt-7 text-[13px] text-[#8f8f8f]">Windows 10 / 11 · No account · No cloud telemetry</FadeIn>
       </section>
 
-      {/* DASHBOARD PREVIEW MOCKUP */}
-      <section className="w-full max-w-5xl px-4 sm:px-6 pb-20">
-        <FadeIn delay={0.1} yOffset={24} duration={0.6}>
-          <motion.div
-            whileHover={shouldReduceMotion ? {} : { y: -2 }}
-            transition={{ duration: 0.25, ease: appleEase }}
-            className="rounded-xl border border-[#1f1f1f] bg-[#09090b] shadow-2xl shadow-black/80 overflow-hidden hover:border-[#2a2a2a] transition-colors duration-200"
-          >
-            {/* Mock Window Titlebar */}
-            <div className="h-9 bg-[#0c0c0c] border-b border-[#1f1f1f] px-3.5 flex items-center justify-between select-none">
-              <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#262626] border border-[#333333]" />
-                <span className="w-2.5 h-2.5 rounded-full bg-[#262626] border border-[#333333]" />
-                <span className="w-2.5 h-2.5 rounded-full bg-[#262626] border border-[#333333]" />
-                <span className="text-[11px] font-mono text-[#777777] ml-2">
-                  Token Tracker &mdash; Local Telemetry &amp; Expense Dashboard
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                  Live Ingestion Active
-                </span>
-              </div>
+      <section id="live-view" className="mx-auto max-w-6xl px-5 pb-28 sm:px-8">
+        <FadeIn yOffset={24}><div className="overflow-hidden rounded-md border border-black/15 bg-white">
+          <div className="flex h-11 items-center justify-between border-b border-black/10 px-4"><div className="flex items-center gap-2 text-[12px] text-[#666]"><span className="h-2 w-2 rounded-full bg-black" />Live local workspace</div><div className="flex items-center gap-2 text-[11px] text-[#666]"><Radio className="h-3.5 w-3.5" />Watching 6 sources</div></div>
+          <div className="grid min-h-[510px] md:grid-cols-[210px_1fr]">
+            <aside className="border-b border-black/10 p-3 md:border-b-0 md:border-r"><p className="px-2 pb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-[#8f8f8f]">Sources</p><div className="flex gap-2 overflow-x-auto md:block md:space-y-1">{sources.map((item) => { const isActive = item.id === activeSource; return <button key={item.id} onClick={() => setActiveSource(item.id)} className={`group min-w-[170px] rounded-md px-3 py-2.5 text-left transition-colors md:block md:w-full ${isActive ? "bg-black text-white" : "hover:bg-[#f1f1f1]"}`}><span className="flex items-center justify-between text-[13px] font-medium"><span>{item.name}</span><span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-white" : "bg-black/40 group-hover:bg-black"}`} /></span><span className={`mt-1 block text-[11px] ${isActive ? "text-white/65" : "text-[#8f8f8f]"}`}>{item.mode} usage</span></button> })}</div></aside>
+            <div className="relative p-5 sm:p-8">
+              <div className="flex flex-col justify-between gap-6 border-b border-black/10 pb-6 sm:flex-row sm:items-start"><AnimatePresence mode="wait"><motion.div key={source.id} initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: appleEase }}><p className="text-[13px] text-[#666]">{source.detail}</p><h2 className="mt-1 text-3xl font-medium tracking-[-0.04em]">{source.name}</h2></motion.div></AnimatePresence><Badge variant="outline" className="w-fit rounded-full border-black/15 bg-white px-3 py-1 text-[11px] font-medium text-black">{source.mode} measurement</Badge></div>
+              <div className="grid gap-8 pt-8 lg:grid-cols-[1fr_190px]"><div><div className="flex items-end justify-between"><div><p className="text-[12px] text-[#666]">Tokens processed · last 7 days</p><p className="mt-1 text-4xl font-medium tracking-[-0.05em]">{source.volume}</p></div><Activity className="h-5 w-5 text-[#666]" /></div><div className="mt-10 flex h-40 items-end gap-2 border-b border-black/15 pb-1">{source.bars.map((height, index) => <motion.div key={`${source.id}-${index}`} initial={false} animate={{ height: `${height}%` }} transition={{ duration: shouldReduceMotion ? 0 : 0.5, delay: index * 0.035, ease: appleEase }} className="min-w-0 flex-1 rounded-t-[3px] bg-black" />)}</div><div className="mt-3 flex justify-between text-[10px] uppercase tracking-[0.1em] text-[#8f8f8f]"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div></div><div className="space-y-3">{[["Provenance", source.mode], ["Storage", "Local SQLite"], ["Sync", "Watching"]].map(([label, value]) => <div key={label} className="rounded-md border border-black/10 p-3"><p className="text-[10px] uppercase tracking-[0.1em] text-[#8f8f8f]">{label}</p><p className="mt-1 text-[13px] font-medium">{value}</p></div>)}</div></div>
+              <motion.div aria-hidden="true" animate={shouldReduceMotion ? {} : { top: ["16%", "83%", "16%"] }} transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }} className="pointer-events-none absolute left-5 right-5 h-px bg-black/10 md:left-8 md:right-8" />
             </div>
-
-            {/* Screenshot Image Container */}
-            <div className="relative w-full aspect-[16/10] bg-black">
-              <Image
-                src="/dashboard-preview.png"
-                alt="Token Tracker Dashboard Preview"
-                fill
-                className="object-cover object-top"
-                priority
-              />
-            </div>
-          </motion.div>
-        </FadeIn>
-
-        {/* Stylized Animated Metric Highlights under Preview */}
-        <Stagger staggerDelay={0.06} delayChildren={0.15} className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-          <StaggerItem>
-            <motion.div
-              whileHover={shouldReduceMotion ? {} : { y: -3 }}
-              transition={{ duration: 0.2, ease: appleEase }}
-              className="rounded-lg border border-[#1f1f1f] bg-[#0c0c0c] p-4 flex flex-col justify-between hover:border-[#2d2d2d] transition-colors shadow-sm hover:shadow-md hover:shadow-black/40"
-            >
-              <span className="text-[11px] font-medium text-[#777777] uppercase tracking-wider font-mono">
-                Tokens Tracked
-              </span>
-              <div className="mt-2 flex items-baseline justify-between">
-                <Counter
-                  value={2841920}
-                  className="text-xl font-bold font-mono text-white tabular-nums"
-                />
-                <span className="text-[10px] text-[#10b981] font-mono">100% Local</span>
-              </div>
-            </motion.div>
-          </StaggerItem>
-
-          <StaggerItem>
-            <motion.div
-              whileHover={shouldReduceMotion ? {} : { y: -3 }}
-              transition={{ duration: 0.2, ease: appleEase }}
-              className="rounded-lg border border-[#1f1f1f] bg-[#0c0c0c] p-4 flex flex-col justify-between hover:border-[#2d2d2d] transition-colors shadow-sm hover:shadow-md hover:shadow-black/40"
-            >
-              <span className="text-[11px] font-medium text-[#777777] uppercase tracking-wider font-mono">
-                Spend Monitored
-              </span>
-              <div className="mt-2 flex items-baseline justify-between">
-                <Counter
-                  value={34.18}
-                  prefix="$"
-                  decimals={2}
-                  className="text-xl font-bold font-mono text-white tabular-nums"
-                />
-                <span className="text-[10px] text-[#888888] font-mono">Under Budget</span>
-              </div>
-            </motion.div>
-          </StaggerItem>
-
-          <StaggerItem>
-            <motion.div
-              whileHover={shouldReduceMotion ? {} : { y: -3 }}
-              transition={{ duration: 0.2, ease: appleEase }}
-              className="rounded-lg border border-[#1f1f1f] bg-[#0c0c0c] p-4 flex flex-col justify-between hover:border-[#2d2d2d] transition-colors shadow-sm hover:shadow-md hover:shadow-black/40"
-            >
-              <span className="text-[11px] font-medium text-[#777777] uppercase tracking-wider font-mono">
-                Ingested Sources
-              </span>
-              <div className="mt-2 flex items-baseline justify-between">
-                <Counter
-                  value={6}
-                  suffix=" Supported"
-                  className="text-xl font-bold font-mono text-white tabular-nums"
-                />
-                <span className="text-[10px] text-[#06b6d4] font-mono">Auto-Watch</span>
-              </div>
-            </motion.div>
-          </StaggerItem>
-
-          <StaggerItem>
-            <motion.div
-              whileHover={shouldReduceMotion ? {} : { y: -3 }}
-              transition={{ duration: 0.2, ease: appleEase }}
-              className="rounded-lg border border-[#1f1f1f] bg-[#0c0c0c] p-4 flex flex-col justify-between hover:border-[#2d2d2d] transition-colors shadow-sm hover:shadow-md hover:shadow-black/40"
-            >
-              <span className="text-[11px] font-medium text-[#777777] uppercase tracking-wider font-mono">
-                Network Telemetry
-              </span>
-              <div className="mt-2 flex items-baseline justify-between">
-                <Counter
-                  value={0}
-                  suffix=" Bytes"
-                  className="text-xl font-bold font-mono text-white tabular-nums"
-                />
-                <span className="text-[10px] text-[#10b981] font-mono">Offline Only</span>
-              </div>
-            </motion.div>
-          </StaggerItem>
-        </Stagger>
-      </section>
-
-      {/* CORE FEATURES GRID */}
-      <section className="w-full max-w-5xl px-4 sm:px-6 py-12 border-t border-[#1f1f1f]">
-        <FadeIn yOffset={16}>
-          <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-sans font-bold tracking-tight text-white">
-              Architected for Exact Local Visibility
-            </h2>
-            <p className="text-xs sm:text-sm text-[#888888] leading-relaxed">
-              Provider dashboards only show organization-wide monthly totals. Token Tracker attributes every prompt, completion, and cache read to the local project and task that generated it.
-            </p>
           </div>
-        </FadeIn>
-
-        {/* Staggered Feature Cards with Subtle Lift on Hover */}
-        <Stagger staggerDelay={0.08} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {features.map((feat) => {
-            const Icon = feat.icon
-            return (
-              <StaggerItem key={feat.title}>
-                <motion.div
-                  whileHover={shouldReduceMotion ? {} : { y: -3 }}
-                  transition={{ duration: 0.2, ease: appleEase }}
-                >
-                  <Card className="border-[#1f1f1f] bg-[#0a0a0a] hover:border-[#2d2d2d] transition-colors duration-200 shadow-sm hover:shadow-md hover:shadow-black/40 h-full">
-                    <CardHeader className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="w-8 h-8 rounded bg-[#141414] border border-[#222222] flex items-center justify-center text-white">
-                          <Icon className="w-4 h-4 text-[#10b981]" />
-                        </div>
-                        <Badge variant="muted" className="text-[10px] font-mono">
-                          {feat.badge}
-                        </Badge>
-                      </div>
-                      <CardTitle className="text-base text-white font-sans font-semibold pt-1">
-                        {feat.title}
-                      </CardTitle>
-                      <CardDescription className="text-xs text-[#8c8c8c] leading-relaxed">
-                        {feat.description}
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                </motion.div>
-              </StaggerItem>
-            )
-          })}
-        </Stagger>
+        </div></FadeIn>
       </section>
 
-      {/* SUPPORTED LOCAL SOURCES */}
-      <section className="w-full max-w-5xl px-4 sm:px-6 py-12 border-t border-[#1f1f1f]">
-        <FadeIn yOffset={16}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-8 gap-4">
-            <div>
-              <span className="text-[11px] font-medium text-[#777777] uppercase tracking-wider font-mono">
-                Compatibility Matrix
-              </span>
-              <h2 className="text-xl sm:text-2xl font-sans font-bold text-white tracking-tight mt-1">
-                Supported Agentic Coding Tools
-              </h2>
-            </div>
-            <span className="text-xs text-[#888888] max-w-xs sm:text-right">
-              Automatically discovered on your machine with zero configuration required.
-            </span>
-          </div>
-        </FadeIn>
+      <section className="mx-auto max-w-6xl px-5 py-20 sm:px-8"><FadeIn yOffset={16} className="flex flex-col justify-between gap-5 border-t border-black/15 pt-5 sm:flex-row sm:items-end"><div><p className="text-[13px] font-medium text-[#666]">The essential layer</p><h2 className="mt-2 max-w-xl text-4xl font-medium tracking-[-0.045em] sm:text-5xl">Less guessing. More signal.</h2></div><p className="max-w-sm text-[15px] leading-6 text-[#666]">A focused UI for your local agentic work—not another dashboard competing for your attention.</p></FadeIn><Stagger staggerDelay={0.09} className="mt-12 grid gap-4 md:grid-cols-3">{features.map((feature) => { const Icon = feature.icon; return <StaggerItem key={feature.title}><motion.div whileHover={shouldReduceMotion ? {} : { y: -5 }} transition={{ duration: 0.25, ease: appleEase }} className="h-full"><Card className="h-full rounded-md border-black/15 bg-white shadow-none transition-colors hover:bg-[#f1f1f1]"><CardHeader className="p-5"><Icon className="mb-10 h-5 w-5" /><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#666]">{feature.kicker}</p><CardTitle className="mt-2 text-xl font-medium tracking-[-0.03em] text-black">{feature.title}</CardTitle><CardDescription className="pt-2 text-[14px] leading-6 text-[#666]">{feature.body}</CardDescription></CardHeader></Card></motion.div></StaggerItem> })}</Stagger></section>
 
-        {/* Staggered Tool Matrix */}
-        <Stagger staggerDelay={0.05} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {supportedTools.map((tool) => (
-            <StaggerItem key={tool.name}>
-              <motion.div
-                whileHover={shouldReduceMotion ? {} : { y: -2 }}
-                transition={{ duration: 0.2, ease: appleEase }}
-                className="p-4 rounded-lg border border-[#1f1f1f] bg-[#0c0c0c] flex flex-col justify-between space-y-3 hover:border-[#2d2d2d] transition-colors duration-200 shadow-sm h-full"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-white font-sans">{tool.name}</span>
-                  <span
-                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                      tool.status === "Exact Tokens"
-                        ? "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]"
-                        : "border-[#06b6d4]/30 bg-[#06b6d4]/10 text-[#06b6d4]"
-                    }`}
-                  >
-                    {tool.status}
-                  </span>
-                </div>
-                <div className="text-[11px] text-[#666666] font-mono">
-                  Log Format: {tool.type}
-                </div>
-              </motion.div>
-            </StaggerItem>
-          ))}
-        </Stagger>
-      </section>
-
-      {/* FINAL CALL TO ACTION */}
-      <section className="w-full max-w-5xl px-4 sm:px-6 py-16 border-t border-[#1f1f1f]">
-        <FadeIn yOffset={20}>
-          <div className="rounded-xl border border-[#222222] bg-gradient-to-b from-[#0e0e0e] to-[#080808] p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl shadow-black/50">
-            <div className="space-y-2 text-center sm:text-left">
-              <h3 className="text-xl sm:text-2xl font-sans font-bold text-white tracking-tight">
-                Ready to take control of your agentic AI spending?
-              </h3>
-              <p className="text-xs sm:text-sm text-[#888888] max-w-md">
-                Download the single portable installer for Windows. No account registration, no credit card, no cloud dependencies.
-              </p>
-            </div>
-            <motion.div
-              whileHover={shouldReduceMotion ? {} : { scale: 1.02 }}
-              whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 450, damping: 25 }}
-              className="flex-shrink-0"
-            >
-              <Button asChild size="lg" className="bg-white text-black font-semibold hover:bg-white/90 h-11 px-6 shadow-lg shadow-white/5">
-                <Link href="/download" className="flex items-center gap-2">
-                  <Download className="w-4 h-4" />
-                  <span>Get Token Tracker v1.8</span>
-                </Link>
-              </Button>
-            </motion.div>
-          </div>
-        </FadeIn>
-      </section>
+      <section className="mx-auto max-w-6xl px-5 pb-28 pt-12 sm:px-8"><FadeIn yOffset={20}><div className="flex flex-col gap-8 rounded-md border border-black/15 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-10"><div><div className="mb-5 flex h-9 w-9 items-center justify-center rounded-full border border-black/15"><Sparkles className="h-4 w-4" /></div><h2 className="max-w-xl text-3xl font-medium tracking-[-0.04em] sm:text-4xl">Your AI spend deserves a local ledger.</h2><p className="mt-3 max-w-lg text-[15px] leading-6 text-[#666]">Install Token Tracker and start with the work you have already done.</p></div><div className="flex shrink-0 flex-col gap-3 sm:items-end"><Button asChild size="lg" className="h-11 rounded-full bg-black px-6 text-sm text-white hover:bg-[#222]"><Link href="/download">Get Token Tracker <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><span className="flex items-center gap-1.5 text-[12px] text-[#666]"><Check className="h-3.5 w-3.5" />Works entirely offline</span></div></div></FadeIn></section>
     </div>
   )
 }

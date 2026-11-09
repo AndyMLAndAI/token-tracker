@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'motion/react'
+import { springPhysics, itemFadeInVariants, staggerContainerVariants } from '@/lib/motion'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
@@ -216,7 +218,12 @@ export function Projects({ onSelectProject }: ProjectsProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      variants={staggerContainerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#1f1f1f]">
         <div>
@@ -486,6 +493,6 @@ export function Projects({ onSelectProject }: ProjectsProps) {
           )}
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   )
 }

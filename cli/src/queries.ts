@@ -72,7 +72,7 @@ export interface ProjectDetailData {
 export function getStatusSummary(): StatusSummary {
   const db = getReadOnlyDb()
   const now = Date.now()
-  const oneDayAgo = now - 24 * 60 * 60 * 1000
+  const todayStart = new Date().setHours(0, 0, 0, 0)
   const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000
 
   // Today
@@ -83,7 +83,7 @@ export function getStatusSummary(): StatusSummary {
       COUNT(id) as turn_count
     FROM turns
     WHERE timestamp >= ?
-  `).get(oneDayAgo) as any
+  `).get(todayStart) as any
 
   // Week
   const weekRow = db.prepare(`

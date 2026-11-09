@@ -62,7 +62,7 @@ export class TrayManager {
     try {
       const db = getDb()
       const now = Date.now()
-      const oneDayAgo = now - 24 * 60 * 60 * 1000
+      const todayStart = new Date().setHours(0, 0, 0, 0)
       const todayStmt = db.prepare(`
         SELECT 
           COALESCE(SUM(input_tokens + output_tokens), 0) as total_tokens,
@@ -70,7 +70,7 @@ export class TrayManager {
         FROM turns
         WHERE timestamp >= ?
       `)
-      const todayRow = todayStmt.get(oneDayAgo) as any
+      const todayRow = todayStmt.get(todayStart) as any
       return {
         totalTokens: Number(todayRow?.total_tokens || 0),
         totalCost: Number(todayRow?.total_cost || 0),

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { Shell, PageId } from '@/components/layout/Shell'
 import { Dashboard } from '@/pages/Dashboard'
 import { Projects } from '@/pages/Projects'
@@ -7,6 +8,7 @@ import { Settings } from '@/pages/Settings'
 import { UnlockProvider } from '@/context/UnlockContext'
 import { CurrencyProvider } from '@/context/CurrencyContext'
 import { UnlockModal } from '@/components/UnlockModal'
+import { pageTransitionVariants } from '@/lib/motion'
 
 export function App() {
   const [activePage, setActivePage] = useState<PageId>('dashboard')
@@ -30,6 +32,8 @@ export function App() {
     setActivePage('session-detail')
   }
 
+  const pageKey = activePage === 'session-detail' ? `session-${selectedProjectId}` : activePage
+
   return (
     <UnlockProvider>
       <CurrencyProvider>
@@ -39,19 +43,30 @@ export function App() {
           selectedProjectId={selectedProjectId}
           setSelectedProjectId={setSelectedProjectId}
         >
-          {activePage === 'dashboard' && (
-            <Dashboard onSelectProject={handleSelectProject} />
-          )}
-          {activePage === 'projects' && (
-            <Projects onSelectProject={handleSelectProject} />
-          )}
-          {activePage === 'session-detail' && selectedProjectId && (
-            <SessionDetail
-              projectId={selectedProjectId}
-              onBack={() => setActivePage('projects')}
-            />
-          )}
-          {activePage === 'settings' && <Settings />}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pageKey}
+              variants={pageTransitionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="w-full"
+            >
+              {activePage === 'dashboard' && (
+                <Dashboard onSelectProject={handleSelectProject} />
+              )}
+              {activePage === 'projects' && (
+                <Projects onSelectProject={handleSelectProject} />
+              )}
+              {activePage === 'session-detail' && selectedProjectId && (
+                <SessionDetail
+                  projectId={selectedProjectId}
+                  onBack={() => setActivePage('projects')}
+                />
+              )}
+              {activePage === 'settings' && <Settings />}
+            </motion.div>
+          </AnimatePresence>
         </Shell>
         <UnlockModal />
       </CurrencyProvider>

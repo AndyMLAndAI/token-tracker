@@ -7,137 +7,212 @@
 </head>
 <body>
 
-  <!-- Wizard Content Container (Starts immediately at the top edge) -->
-  <div class="wizard-body">
+  <!-- Frameless Custom Titlebar -->
+  <header class="window-titlebar">
+    <div class="titlebar-brand">
+      <img src="assets/icon.png" alt="Token Tracker" class="titlebar-icon">
+      <span class="titlebar-title">Token Tracker Setup</span>
+      <span class="titlebar-badge">v1.8</span>
+    </div>
+    <div class="titlebar-actions">
+      <button class="titlebar-btn" id="btnTitlebarMinimize" title="Minimize">
+        <svg width="10" height="1" viewBox="0 0 10 1" fill="none" stroke="currentColor" stroke-width="1.2">
+          <line x1="0" y1="0.5" x2="10" y2="0.5"/>
+        </svg>
+      </button>
+      <button class="titlebar-btn close" id="btnTitlebarClose" title="Close">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2">
+          <line x1="1" y1="1" x2="9" y2="9"/>
+          <line x1="9" y1="1" x2="1" y2="9"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Wizard Content Container -->
+  <main class="wizard-body">
 
     <!-- SCREEN 1: WELCOME -->
-    <div class="step-screen active" id="screenWelcome">
-      <div class="brand-header">
-        <img src="assets/icon.png" alt="Token Tracker" class="pixel-icon">
-        <div class="brand-title-area">
-          <div class="brand-name">Token Tracker</div>
-          <div class="brand-sub">Setup Program - Version 1.8</div>
+    <section class="step-screen active" id="screenWelcome">
+      <div class="screen-header">
+        <div class="icon-badge">
+          <img src="assets/icon.png" alt="Token Tracker">
         </div>
-      </div>
-      <div class="screen-heading">Welcome to Token Tracker Setup.</div>
-      <div class="screen-text">
-        This program will install Token Tracker version 1.8 on your computer.
-      </div>
-      <div class="screen-text">
-        It is strongly recommended that you exit all other programs before continuing.
-      </div>
-      <div class="screen-text" style="margin-top: auto;">
-        Click Next to continue, or Cancel to exit Setup.
-      </div>
-    </div>
-
-    <!-- SCREEN 2: LICENSE / INFO -->
-    <div class="step-screen" id="screenLicense">
-      <div class="screen-heading">Software Information &amp; Terms</div>
-      <div class="screen-text" style="margin-bottom: 6px;">Please review the following information:</div>
-      <div class="inset-panel" style="flex: 1; padding: 0;">
-        <div class="license-scroll-area" id="licenseText">TOKEN TRACKER v1.8
-SETUP INFORMATION AND SOFTWARE TERMS
-====================================================================
-
-Welcome to Token Tracker.
-
-Token Tracker is an exact local AI token and cost tracking desktop
-application designed to parse, aggregate, and analyze session logs
-and token usage across your agentic development workflows:
-- Claude Code
-- Google Antigravity
-- Cline and Roo Code
-- OpenAI and Anthropic proxy endpoints
-
-PRIVACY AND LOCAL ARCHITECTURE:
-* 100% Local: All session ingestion and SQLite database storage
-  reside exclusively on your local workstation.
-* Zero Cloud Telemetry: No transcripts, file paths, or project
-  telemetry are ever transmitted to third-party servers.
-
-Press Page Down to read the remainder of this information.
-Click Next to accept and choose the installation destination.
-====================================================================
-Token Tracker Project</div>
-      </div>
-    </div>
-
-    <!-- SCREEN 3: CHOOSE INSTALL LOCATION -->
-    <div class="step-screen" id="screenLocation">
-      <div class="screen-heading">Destination Location</div>
-      <div class="screen-text">Setup will install Token Tracker in the following folder:</div>
-      
-      <div class="location-box">
-        <div class="location-row">
-          <input type="text" class="path-input" id="inputInstallPath" spellcheck="false">
-          <button class="btn-win95" id="btnBrowse">Browse...</button>
+        <div>
+          <h1 class="screen-heading">Install Token Tracker</h1>
+          <p class="screen-subtitle">Exact local token &amp; cost telemetry for AI coding assistants.</p>
         </div>
       </div>
 
-      <div class="disk-info">
-        <div>Space required: <span id="lblSpaceRequired">480 MB</span></div>
-        <div>Space available on drive: <span id="lblSpaceAvailable">Checking...</span></div>
-      </div>
-
-      <div class="screen-text" style="margin-top: auto;">
-        Click Install to begin installation.
-      </div>
-    </div>
-
-    <!-- SCREEN 4: INSTALLING (Segmented Block Progress Bar) -->
-    <div class="step-screen" id="screenInstalling">
-      <div class="screen-heading" style="margin-top: 20px;">Installing Token Tracker</div>
-      <div class="screen-text">Please wait while files are copied to your computer...</div>
-      
-      <div style="margin-top: 15px;">
-        <!-- Authentic Segmented-Block Progress Bar -->
-        <div class="progress-trough">
-          <div class="progress-blocks-container" id="progressBlocksContainer">
-            <!-- Segmented blocks rendered dynamically here -->
+      <div class="card-panel">
+        <div class="feature-list">
+          <div class="feature-item">
+            <div class="feature-bullet"></div>
+            <div class="feature-text">
+              <strong>100% On-Device Privacy:</strong> <span>Session logs and SQLite databases reside strictly on your local workstation.</span>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-bullet"></div>
+            <div class="feature-text">
+              <strong>Multi-Assistant Tailing:</strong> <span>Real-time capture across Claude Code, Antigravity, Cline, Roo Code, and Aider.</span>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-bullet"></div>
+            <div class="feature-text">
+              <strong>Prompt Cache Analytics:</strong> <span>Calculates exact hit ratios, un-cached equivalents, and financial discounts.</span>
+            </div>
           </div>
         </div>
-        <div class="install-status-label" id="lblInstallStatus">Preparing files...</div>
       </div>
-    </div>
 
-    <!-- SCREEN 5: FINISH -->
-    <div class="step-screen" id="screenFinish">
-      <div class="brand-header">
-        <img src="assets/icon.png" alt="Token Tracker" class="pixel-icon">
-        <div class="brand-title-area">
-          <div class="brand-name">Token Tracker</div>
-          <div class="brand-sub">Setup Program - Version 1.8</div>
+      <p class="screen-subtitle" style="margin-top: auto;">
+        Click Continue to configure your installation preferences.
+      </p>
+    </section>
+
+    <!-- SCREEN 2: LICENSE / LOCAL ARCHITECTURE -->
+    <section class="step-screen" id="screenLicense">
+      <div class="screen-header">
+        <div>
+          <h1 class="screen-heading">Architecture &amp; Privacy</h1>
+          <p class="screen-subtitle">Token Tracker operates with complete zero-cloud telemetry.</p>
         </div>
       </div>
-      <div class="screen-heading">Setup Complete</div>
-      <div class="screen-text">
-        Token Tracker has been successfully installed on your computer.
+
+      <div class="license-box" id="licenseText">TOKEN TRACKER • LOCAL RUNTIME AGREEMENT
+====================================================================
+
+Token Tracker runs 100% locally on your computer.
+
+1. LOCAL LOG INGESTION
+   - Token Tracker parses local conversation logs from your home directory:
+     ~/.claude/projects/
+     ~/.antigravity/
+     VS Code globalStorage (Cline & Roo Code)
+     .aider.chat.history.md
+   - No prompts, transcripts, code, or workspace paths are ever transmitted
+     to any cloud server or third-party telemetry collector.
+
+2. LOCAL SQLITE STORAGE
+   - All token metrics and financial cost aggregations are stored in
+     ~/.token_tracker/token_tracker.db using SQLite WAL mode.
+   - You maintain complete ownership and direct SQL access to all data.
+
+3. NETWORK ISOLATION
+   - The application does not require internet access for core telemetry.
+   - The optional loopback proxy operates exclusively on 127.0.0.1.
+====================================================================</div>
+    </section>
+
+    <!-- SCREEN 3: DESTINATION LOCATION -->
+    <section class="step-screen" id="screenLocation">
+      <div class="screen-header">
+        <div>
+          <h1 class="screen-heading">Destination Directory</h1>
+          <p class="screen-subtitle">Choose where Token Tracker application files will be installed.</p>
+        </div>
       </div>
-      <div class="screen-text">
-        Desktop and Start Menu shortcuts have been created.
+
+      <div class="location-group">
+        <div class="location-input-row">
+          <input type="text" class="modern-input" id="inputInstallPath" spellcheck="false">
+          <button class="btn-secondary" id="btnBrowse">Browse</button>
+        </div>
+
+        <div class="disk-stats">
+          <div class="disk-stat-item">
+            <span class="disk-stat-label">Space Required:</span>
+            <span class="disk-stat-val" id="lblSpaceRequired">480 MB</span>
+          </div>
+          <div class="disk-stat-item">
+            <span class="disk-stat-label">Available on Drive:</span>
+            <span class="disk-stat-val" id="lblSpaceAvailable">Calculating...</span>
+          </div>
+        </div>
       </div>
-      <label class="checkbox-row">
+
+      <p class="screen-subtitle" style="margin-top: auto;">
+        Click Install to begin copying files.
+      </p>
+    </section>
+
+    <!-- SCREEN 4: INSTALLING (Continuous Fluid Bar) -->
+    <section class="step-screen" id="screenInstalling">
+      <div class="install-container">
+        <div>
+          <div class="progress-header-row">
+            <div>
+              <h1 class="screen-heading">Installing Token Tracker</h1>
+              <p class="screen-subtitle">Deploying binaries and setting up local services...</p>
+            </div>
+            <div class="progress-pct" id="lblProgressPct">0%</div>
+          </div>
+        </div>
+
+        <div class="progress-trough">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="install-status-label" id="lblInstallStatus">Preparing files...</div>
+      </div>
+    </section>
+
+    <!-- SCREEN 5: FINISH -->
+    <section class="step-screen" id="screenFinish">
+      <div class="screen-header">
+        <div class="icon-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h1 class="screen-heading">Installation Complete</h1>
+          <p class="screen-subtitle">Token Tracker is ready to monitor your development workflows.</p>
+        </div>
+      </div>
+
+      <div class="card-panel">
+        <div class="feature-list">
+          <div class="feature-item">
+            <div class="feature-bullet"></div>
+            <div class="feature-text">
+              <strong>Shortcuts Created:</strong> <span>Desktop icon and Windows Start Menu entries are registered.</span>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-bullet"></div>
+            <div class="feature-text">
+              <strong>Background Monitor:</strong> <span>System tray daemon is ready to tail active coding sessions.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <label class="finish-toggle">
         <input type="checkbox" id="chkLaunchApp" checked>
-        <span>Launch Token Tracker now</span>
+        <span>Launch Token Tracker immediately</span>
       </label>
-      <div class="screen-text" style="margin-top: auto;">
-        Click Finish to exit Setup.
-      </div>
+
+      <p class="screen-subtitle" style="margin-top: auto;">
+        Click Finish to close the setup wizard.
+      </p>
+    </section>
+
+  </main>
+
+  <!-- Wizard Footer Controls -->
+  <footer class="wizard-footer">
+    <div class="footer-left">
+      <button class="btn-ghost" id="btnCancel">Cancel</button>
     </div>
-
-  </div>
-
-  <!-- Beveled Horizontal Divider -->
-  <div class="win95-divider"></div>
-
-  <!-- Wizard Footer Controls (Includes Cancel / Exit button) -->
-  <div class="wizard-footer">
-    <button class="btn-win95" id="btnBack">&lt; Back</button>
-    <button class="btn-win95" id="btnNext">Next &gt;</button>
-    <button class="btn-win95" id="btnFinish" style="display: none;">Finish</button>
-    <button class="btn-win95" id="btnCancel">Cancel</button>
-  </div>
+    <div class="footer-right">
+      <button class="btn-secondary" id="btnBack">Back</button>
+      <button class="btn-primary" id="btnNext">Continue</button>
+      <button class="btn-primary" id="btnFinish" style="display: none;">Finish</button>
+    </div>
+  </footer>
 
   <script src="renderer.js"></script>
 </body>
